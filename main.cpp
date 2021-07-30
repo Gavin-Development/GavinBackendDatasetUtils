@@ -415,3 +415,178 @@ for (int64_t i = 0; i < FileLength; i++) {
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+void DataLoadAndParseThread(int64_t samplesToRead, std::string FileName, int64_t blockStartIndex, int64_t blockSize, std::vector<py::list>*returnData, int64_t progresssReportInterval, int startToken, int endToken, int sampleLength, int paddingValue, int threadId) {
+    py::object pickle = py::module_::import("pickle").attr("loads");
+    py::object base64decode = py::module_::import("base64").attr("b64decode");
+    std::ifstream File(FileName, std::ios::ate);
+    File.seekg(blockStartIndex);
+    std::string Line;
+    bool GettingSamples;
+    if (blockStartIndex == 0) {
+        GettingSamples = true;
+    }
+    else GettingSamples = false;
+    py::list intvec;
+    int64_t CurrentLine = 0;
+    int64_t MaxSamples = samplesToRead;
+    int64_t FileAccessLimitIndex = blockStartIndex + blockSize;
+    //std::cout << "Thread " << threadId << " Located At Byte " << File.tellg() << " In File." << std::endl;
+
+    while (std::getline(File, Line)) {
+        if (GettingSamples == true) {
+            if (samplesToRead > 0 && File.tellg() < FileAccessLimitIndex) {
+                Line.erase(Line.begin(), Line.begin() + 2);
+                Line.erase(Line.end() - 1, Line.end());
+                intvec = pickle(base64decode(Line));
+                intvec.insert(0, startToken);
+                intvec.insert(intvec.size(), endToken);
+                for (int i = intvec.size(); i < sampleLength; i++) {
+                    intvec.append(paddingValue);
+                }
+                //std::cout << "Thread " << threadId << " About To Push Back To vector." << std::endl;
+                //LockThreadsForWrite.lock();
+                //returnData->push_back(intvec);
+                //LockThreadsForWrite.unlock();
+                //std::cout << "Thread " << threadId << " Pushed Back To vector." << std::endl;
+                samplesToRead--;
+                CurrentLine++;
+                if (CurrentLine % progresssReportInterval == 0) {
+                    //std::cout << (CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
+                }
+            }
+            else {
+                break;
+            }
+        }
+        else {
+            GettingSamples = true;
+        }
+    };
+    File.close();
+    //std::cout << "Thread " << threadId << " Done." << std::endl;
+
+
+};
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+int startexamplelen = 2;
+const char* startexample = "b'";
+int endexamplelen = 1;
+const char* endexample = "'";
+bool totalmatch = false;
+
+int64_t StartIndex = 0;
+int64_t EndIndex = 0;
+int64_t IdentifiedSampleLength = 0;
+
+std::cout << "Thread " << threadId << " Starting." << std::endl;
+std::cout << RawFileData.size() << std::endl;
+for (int i = 0; i < 1000; i++) {
+    std::cout << RawFileData[i];
+}
+std::cout << std::endl;
+for (int64_t i = 0; i < RawFileData.size(); i++) {
+    if (RawFileData[i] == startexample[0]) {
+        for (int j = 0; j < startexamplelen; j++) {
+            if (RawFileData[j + i] == startexample[j]) {
+                totalmatch = true;
+            }
+            else {
+                totalmatch = false;
+                break;
+            }
+        }
+
+        if (totalmatch == true) {
+            StartIndex = i + startexamplelen;
+            totalmatch = false;
+        }
+
+    }
+
+    if (RawFileData[i] == endexample[0]) {
+        for (int j = 0; j < endexamplelen; j++) {
+            if (RawFileData[i + j] == endexample[j]) {
+                totalmatch = true;
+            }
+            else {
+                totalmatch = false;
+                break;
+            }
+        }
+
+        if (totalmatch == true) {
+            // Now we have identified the range of the chunk we need to process it into int64_t.
+            EndIndex = i - 1;
+            totalmatch = false;
+            IdentifiedSampleLength = EndIndex - StartIndex;
+            if (IdentifiedSampleLength <= 0) break;
+            std::cout << "Identified A Sample Of Length " << IdentifiedSampleLength << std::endl;
+            Line.resize(IdentifiedSampleLength);
+            std::cout << "String Resized." << std::endl;
+            for (int j = 0; j < IdentifiedSampleLength; j++) {
+                Line[j] = RawFileData[i + j];
+            }
+            std::cout << "Sample Copied To String" << std::endl;
+            std::cout << Line << std::endl;
+
+            if (IdentifiedSampleLength <= 0) break;
+        }
+    }
+}

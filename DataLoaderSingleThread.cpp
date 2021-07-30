@@ -1,8 +1,8 @@
 ﻿#include "DataLoader.hpp"
 
 // Legacy
-std::vector<py::object> LoadTrainDataST(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
-	std::vector<py::object> FileData;
+std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
+	std::vector<py::list> FileData;
 	if (samplesToRead < 100) {
 		std::cout << "Please Specify A MINIMUM Of 100 Samples To Load." << std::endl;
 		return FileData;
@@ -22,7 +22,6 @@ std::vector<py::object> LoadTrainDataST(int64_t samplesToRead, std::string dataP
 
 	File = std::ifstream(FileName);
 	std::string Line;
-	int LengthLeftToFull;
 	py::list intvec;
 
 	if (File.is_open()) {
@@ -37,13 +36,19 @@ std::vector<py::object> LoadTrainDataST(int64_t samplesToRead, std::string dataP
 		if (samplesToRead > 0) {
 			Line.erase(Line.begin(), Line.begin() + 2);
 			Line.erase(Line.end() - 1, Line.end());
-			intvec = pickle(base64decode(Line));
+			try {
+				intvec = pickle(base64decode(Line));
+			}
+			catch (py::error_already_set& e) {
+				std::cout << "Error In Parsing Base64 Data." << std::endl;
+				continue;
+			}
 			intvec.insert(0, startToken);
 			intvec.insert(intvec.size(), endToken);
 			for (int i = intvec.size(); i < sampleLength; i++) {
 				intvec.append(paddingValue);
 			}
-			FileData.emplace_back(intvec);
+			FileData.push_back(intvec);
 			samplesToRead--;
 			CurrentLine++;
 			if (CurrentLine % ProgressReportInterval == 0) {
@@ -64,6 +69,28 @@ std::vector<py::object> LoadTrainDataST(int64_t samplesToRead, std::string dataP
 	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
 	return FileData;
 };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // current - THIS CODE DOES NOT FUNCTION CORRECTLY DO NO USE
 
