@@ -221,7 +221,6 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="DataLoaderHelperFuncs.cpp" />
     <ClCompile Include="DataLoaderMultiThread.cpp" />
     <ClCompile Include="DataLoaderSingleThread.cpp" />
     <ClCompile Include="main.cpp">

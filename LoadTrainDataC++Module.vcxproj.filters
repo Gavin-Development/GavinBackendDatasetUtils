@@ -21,9 +21,6 @@
     <ClCompile Include="DataLoaderSingleThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DataLoaderHelperFuncs.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PythonFuncsDefinitions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
