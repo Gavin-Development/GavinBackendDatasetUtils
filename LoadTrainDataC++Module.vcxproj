@@ -107,6 +107,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
     <TargetExt>.pyd</TargetExt>
+    <IncludePath>C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\libraries\PicklingTools170Release\C++;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">
     <LinkIncremental>true</LinkIncremental>
@@ -115,6 +116,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
     <TargetExt>.pyd</TargetExt>
+    <IncludePath>C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\libraries\PicklingTools170Release\C++;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">
     <LinkIncremental>false</LinkIncremental>
@@ -155,8 +157,10 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\Josh Shiells\AppData\Local\Programs\Python\Python38\lib\site-packages\pybind11\include;C:\Users\Josh Shiells\AppData\Local\Programs\Python\Python38\include;C:\Users\harve\AppData\Local\Programs\Python\Python38\lib\site-packages\pybind11\include;C:\Users\harve\AppData\Local\Programs\Python\Python38\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Josh Shiells\AppData\Local\Programs\Python\Python38\lib\site-packages\pybind11\include;C:\Users\Josh Shiells\AppData\Local\Programs\Python\Python38\include;C:\Users\harve\AppData\Local\Programs\Python\Python38\lib\site-packages\pybind11\include;C:\Users\harve\AppData\Local\Programs\Python\Python38\include;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\libraries\PicklingTools170Release\C++;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
+      <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
+      <SupportJustMyCode>false</SupportJustMyCode>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -189,7 +193,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>C:\Users\Josh Shiells\AppData\Local\Programs\Python\Python38\lib\site-packages\pybind11\include;C:\Users\Josh Shiells\AppData\Local\Programs\Python\Python38\include;C:\Users\harve\AppData\Local\Programs\Python\Python38\lib\site-packages\pybind11\include;C:\Users\harve\AppData\Local\Programs\Python\Python38\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\Users\Josh Shiells\AppData\Local\Programs\Python\Python38\lib\site-packages\pybind11\include;C:\Users\Josh Shiells\AppData\Local\Programs\Python\Python38\include;C:\Users\harve\AppData\Local\Programs\Python\Python38\lib\site-packages\pybind11\include;C:\Users\harve\AppData\Local\Programs\Python\Python38\include;C:\Program Files (x86)\Microsoft Visual Studio\2019\Community\libraries\PicklingTools170Release\C++;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -223,6 +227,7 @@
   <ItemGroup>
     <ClCompile Include="DataLoaderMultiThread.cpp" />
     <ClCompile Include="DataLoaderSingleThread.cpp" />
+    <ClCompile Include="DataSetConversions.cpp" />
     <ClCompile Include="main.cpp">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">true</ExcludedFromBuild>
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|ARM'">true</ExcludedFromBuild>
@@ -234,6 +239,9 @@
   <ItemGroup>
     <ClInclude Include="base64.hpp" />
     <ClInclude Include="DataLoader.hpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="GPU_Accelerated_Load.cu" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

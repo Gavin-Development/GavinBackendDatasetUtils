@@ -1,15 +1,16 @@
 #pragma once
 #include <pybind11/pybind11.h>
+#include <pybind11/embed.h>
 #include <pybind11/stl.h>
 #include <iostream>
 #include <string>
 #include <fstream>
-#include <thread>
+#include <future>
 #include <stdio.h>
 #include <stdexcept>
 #include <chrono>
 #include <mutex>
-
+#include <tuple>
 
 
 #include "base64.hpp"
@@ -26,20 +27,13 @@ struct ThreadDataRTN {
 
 
 
-
 std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 
-std::vector<py::list> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
+std::tuple< std::vector<py::list>, std::vector<py::list>> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 
 
 
-
-
-
-
-
-
-std::vector<std::vector<int>> LoadTrainDataST_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
-
+std::vector<py::list> LoadTrainDataST_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 void SaveDataST_Future(std::vector<std::vector<int>> Data, std::string FileName);
 
+void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::string fileToSave);

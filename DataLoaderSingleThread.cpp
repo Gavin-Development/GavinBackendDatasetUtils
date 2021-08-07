@@ -2,72 +2,86 @@
 
 // Legacy
 std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
-	std::vector<py::list> FileData;
-	if (samplesToRead < 100) {
-		std::cout << "Please Specify A MINIMUM Of 100 Samples To Load." << std::endl;
-		return FileData;
-	}
-	int64_t StartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-	int64_t EndTime;
-	int64_t TimeTaken;
-	std::string FileName = dataPath + tokenizerName;
-	std::ifstream File;
-	int64_t MaxSamples = samplesToRead;
-	int64_t CurrentLine = 0;
-	int64_t ProgressReportInterval = MaxSamples / 100;
-	py::object pickle = py::module_::import("pickle").attr("loads");
-	py::object base64decode = py::module_::import("base64").attr("b64decode");
+    std::vector<py::list> FileData;
+    if (samplesToRead < 100) {
+        std::cout << "Please Specify A MINIMUM Of 100 Samples To Load." << std::endl;
+        return FileData;
+    }
+    int64_t StartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    int64_t EndTime;
+    int64_t TimeTaken;
+    std::string FileName = dataPath + tokenizerName;
+    std::ifstream File;
+    int64_t MaxSamples = samplesToRead;
+    int64_t CurrentLine = 0;
+    int64_t ProgressReportInterval = MaxSamples / 100;
+    py::object pickle = py::module_::import("pickle").attr("loads");
+    py::object base64decode = py::module_::import("base64").attr("b64decode");
 
-	std::cout << "Loading " << samplesToRead << " Samples From " << FileName << std::endl;
+    std::cout << "Loading " << samplesToRead << " Samples From " << FileName << std::endl;
 
-	File = std::ifstream(FileName);
-	std::string Line;
-	py::list intvec;
+    File = std::ifstream(FileName);
+    std::string Line;
+    py::list intvec;
 
-	if (File.is_open()) {
-		std::cout << "Loading (Up To) " << MaxSamples << " Samples." << std::endl;
-	}
-	else {
-		std::cout << "Failed To Open File." << std::endl;
-		return FileData;
-	}
+    if (File.is_open()) {
+        std::cout << "Loading (Up To) " << MaxSamples << " Samples." << std::endl;
+    }
+    else {
+        std::cout << "Failed To Open File." << std::endl;
+        return FileData;
+    }
 
-	while (std::getline(File, Line)) {
-		if (samplesToRead > 0) {
-			Line.erase(Line.begin(), Line.begin() + 2);
-			Line.erase(Line.end() - 1, Line.end());
-			try {
-				intvec = pickle(base64decode(Line));
+    while (std::getline(File, Line)) {
+        if (samplesToRead > 0) {
+            Line.erase(Line.begin(), Line.begin() + 2);
+            Line.erase(Line.end() - 1, Line.end());
+            try {
+                intvec = pickle(base64decode(Line));
+            }
+            catch (py::error_already_set& e) {
+                std::cout << "Error In Parsing Base64 Data." << std::endl;
+                continue;
+            }
+            intvec.insert(0, startToken);
+            intvec.insert(intvec.size(), endToken);
+
+			if (intvec.size() < sampleLength) {
+				for (int i = intvec.size(); i < sampleLength; i++) {
+					intvec.append(paddingValue);
+				}
 			}
-			catch (py::error_already_set& e) {
-				std::cout << "Error In Parsing Base64 Data." << std::endl;
-				continue;
-			}
-			intvec.insert(0, startToken);
-			intvec.insert(intvec.size(), endToken);
-			for (int i = intvec.size(); i < sampleLength; i++) {
-				intvec.append(paddingValue);
-			}
-			FileData.push_back(intvec);
-			samplesToRead--;
-			CurrentLine++;
-			if (CurrentLine % ProgressReportInterval == 0) {
-				std::cout << (float)(CurrentLine * 100 / MaxSamples)  << "% Done." << std::endl;
-			}
-		}
-		else {
-			std::cout << "All Samples Loaded." << std::endl;
-			break;
-		}
-		
-	}
 
-	File.close();
-	std::cout << "Samples Have Been Read." << std::endl;
-	EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-	TimeTaken = (EndTime - StartTime) / 1000000000;
-	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
-	return FileData;
+			if (intvec.size() > sampleLength) {
+				for (int i = intvec.size() - 2; i > sampleLength - 2; i--) {
+					intvec.attr("pop")(i);
+				}
+			}
+
+			if (intvec.size() != sampleLength) {
+				std::cout << intvec.size() << std::endl;
+			}
+
+            FileData.push_back(intvec);
+            samplesToRead--;
+            CurrentLine++;
+            if (CurrentLine % ProgressReportInterval == 0) {
+                std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
+            }
+        }
+        else {
+            std::cout << "All Samples Loaded." << std::endl;
+            break;
+        }
+
+    }
+
+    File.close();
+    std::cout << "Samples Have Been Read." << std::endl;
+    EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+    TimeTaken = (EndTime - StartTime) / 1000000000;
+    std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
+    return FileData;
 };
 
 
@@ -94,9 +108,9 @@ std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPat
 
 // current - THIS CODE DOES NOT FUNCTION CORRECTLY DO NO USE
 
-std::vector<std::vector<int>> LoadTrainDataST_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
+std::vector<py::list> LoadTrainDataST_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
 	std::cout << "WARNING THI FUNCTION MIGHT NOT WORK AS INTENDED DO NOT USE PROPERLY." << std::endl;
-	std::vector<std::vector<int>> FileData;
+	std::vector<py::list> FileData;
 	if (samplesToRead < 100) {
 		std::cout << "Please Specify A MINIMUM Of 100 Samples To Load." << std::endl;
 		return FileData;
@@ -115,7 +129,8 @@ std::vector<std::vector<int>> LoadTrainDataST_Future(int64_t samplesToRead, std:
 	File = std::ifstream(FileName);
 	std::string Line;
 	std::string tmpstr;
-	std::vector<int> tmpintvec;
+	std::vector<int> intvec;
+	
 
 	if (File.is_open()) {
 		std::cout << "Loading (Up To) " << MaxSamples << " Samples." << std::endl;
@@ -129,36 +144,22 @@ std::vector<std::vector<int>> LoadTrainDataST_Future(int64_t samplesToRead, std:
 	int tmpint;
 	while (std::getline(File, Line)) {
 		if (samplesToRead > 0) {
-			//Line.erase(Line.end() - 1, Line.end());
+			py::list PythonList;
+			std::cout << Line << std::endl;
 			tmpstr = base64::from_base64(Line);
-			//std::cout << Line << std::endl;
-			std::cout << tmpstr << std::endl;
-			std::cout << tmpstr.length() << std::endl;
-			for (int i = 0; i < (tmpstr.length() / 4); i++) {
-				//std::cout << "Converting char to int." << std::endl;
-				//tmpint = int(
-				//	(uint8_t)(tmpstr[(i * 4) + 3]) << 24 |
-				//	(uint8_t)(tmpstr[(i * 4) + 2]) << 16 |
-				//	(uint8_t)(tmpstr[(i * 4) + 1]) << 8  |
-				//	(uint8_t)(tmpstr[(i * 4) + 0])
-				//);
+			//std::cout << tmpstr << std::endl;
+			intvec.resize(tmpstr.size() / 4);
+			memcpy(intvec.data(), tmpstr.data(), sizeof(tmpstr[0]) * tmpstr.length());
+			std::cout << "Done copying memory." << std::endl;
+			std::cout << intvec[0] << std::endl;
 
-				tmpint = static_cast<int>(static_cast<unsigned char>(tmpstr[(i * 4) + 0]) << 1 |
-					static_cast<unsigned char>(tmpstr[(i * 4) + 1]) << 0 |
-					static_cast<unsigned char>(tmpstr[(i * 4) + 2]) << 0 |
-					static_cast<unsigned char>(tmpstr[(i * 4) + 3])) << 0;
-
-				tmpintvec.push_back(tmpint);
-
-				//tmpintvec.push_back( (tmpstr[(i * 4) + 0] << 24) + (tmpstr[(i * 4) + 1] << 16) + (tmpstr[(i * 4) + 2] << 8) + (tmpstr[(i * 4) + 3]) );                                 // (tmpstr[(i * 4)] << 24) + (tmpstr[(i * 4) + 1] << 16) + (tmpstr[(i * 4) + 2] << 8) + (tmpstr[(i * 4) + 3]
-				//std::cout << tmpintvec[i] << std::endl;
+			for (int& integer : intvec) {
+				PythonList.append(integer);
 			}
-			FileData.emplace_back(tmpintvec);
+
+			FileData.emplace_back(PythonList);
+
 			samplesToRead--;
-			CurrentLine++;
-			if (CurrentLine % ProgressReportInterval == 0) {
-				std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
-			}
 		}
 		else {
 			std::cout << "There Arent Enough Samples In File. But Avalible Samples Were Loaded." << std::endl;
