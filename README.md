@@ -20,6 +20,8 @@ ConvertDataSet_TEST(10000, "Tokenizer-3.to", "Tokenizer-3.to.BIN")
 ```
 This will open the legacy file and convert the first 10000 lines (samples) to the new .BIN format and save it with file name "Tokenizer-3.to.BIN".
 
+**NOTE** Using a very large number will basically mean it will load all samples in the file then save to .BIN as the limit only exists for the purposes of expaditing testing.
+
 ### New File Format
 In the last commit support was added for the new file format (.BIN) this format is almost identical to the old format with a few tweaks to allow greater parralelism in loading file contents, removing the need for embedded python code and thus allowing actual multithreaded loading of the file.
 
