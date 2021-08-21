@@ -9,7 +9,9 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 	std::string Line;
 	py::list LineData;
 	std::vector<int> intvec;
-	char bytes[4];
+	int64_t CurrentLine = 0;
+	int64_t MaxSamples = samplesToRead;
+	int64_t ProgressReportInterval = MaxSamples / 100;
 	std::string DataToWrite;
 
 
@@ -40,6 +42,10 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 			DataToWrite.clear();
 			intvec.clear();
 			samplesToRead--;
+			CurrentLine++;
+			if (CurrentLine % ProgressReportInterval == 0) {
+				std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
+			}
 		}
 		else break;
 
@@ -50,26 +56,3 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 	Outfile.close();
 };
 
-//
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 
-// 	std::stringstream strstream;
-// 
-// 
-// 			strstream.clear();
-//std::copy(intvec.begin(), intvec.end(), std::ostream_iterator<int>(strstream, " "));
-//std::cout << strstream.str() << std::endl;
-//Line = strstream.str();
-//

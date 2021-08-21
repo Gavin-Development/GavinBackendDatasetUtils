@@ -145,13 +145,9 @@ std::vector<py::list> LoadTrainDataST_Future(int64_t samplesToRead, std::string 
 	while (std::getline(File, Line)) {
 		if (samplesToRead > 0) {
 			py::list PythonList;
-			std::cout << Line << std::endl;
 			tmpstr = base64::from_base64(Line);
-			//std::cout << tmpstr << std::endl;
 			intvec.resize(tmpstr.size() / 4);
 			memcpy(intvec.data(), tmpstr.data(), sizeof(tmpstr[0]) * tmpstr.length());
-			std::cout << "Done copying memory." << std::endl;
-			std::cout << intvec[0] << std::endl;
 
 			for (int& integer : intvec) {
 				PythonList.append(integer);
@@ -160,6 +156,10 @@ std::vector<py::list> LoadTrainDataST_Future(int64_t samplesToRead, std::string 
 			FileData.emplace_back(PythonList);
 
 			samplesToRead--;
+			CurrentLine++;
+			if (CurrentLine % ProgressReportInterval == 0) {
+				std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
+			}
 		}
 		else {
 			std::cout << "There Arent Enough Samples In File. But Avalible Samples Were Loaded." << std::endl;

@@ -9,12 +9,13 @@ int InitModule() {
     return 0;
 }
 
-PYBIND11_MODULE(LoadTrainData, handle) {
+PYBIND11_MODULE(LoadTrainData_CudaSupport, handle) {
     InitModule();
     handle.doc() = "This module is a custom module written in c++ to accelerate dataset loading for Gavin Bot made by Josh (Scott Survivor)";
     handle.def("LoadTrainDataST", &LoadTrainDataST);
-    handle.def("LoadTrainDataMT", &LoadTrainDataMT);
+    handle.def("LoadTrainDataMT_Future", &LoadTrainDataMT_Future);
     handle.def("LoadTrainDataST_Future", &LoadTrainDataST_Future);
+    handle.def("LoadTrainDataGPU_Accelerated_Future", &LoadTrainDataGPU_Accelerated_Future);
     handle.def("SaveDataST_Future", &SaveDataST_Future);
 
     handle.def("ConvertDataSet_TEST", &ConvertToBinFormat);
