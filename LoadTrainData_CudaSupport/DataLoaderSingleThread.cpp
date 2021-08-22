@@ -1,171 +1,111 @@
 ﻿#include "DataLoader.hpp"
 
-// Legacy
 std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
-    std::vector<py::list> FileData;
-    if (samplesToRead < 100) {
-        std::cout << "Please Specify A MINIMUM Of 100 Samples To Load." << std::endl;
-        return FileData;
-    }
-    int64_t StartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-    int64_t EndTime;
-    int64_t TimeTaken;
-    std::string FileName = dataPath + tokenizerName;
-    std::ifstream File;
-    int64_t MaxSamples = samplesToRead;
-    int64_t CurrentLine = 0;
-    int64_t ProgressReportInterval = MaxSamples / 100;
-    py::object pickle = py::module_::import("pickle").attr("loads");
-    py::object base64decode = py::module_::import("base64").attr("b64decode");
-
-    std::cout << "Loading " << samplesToRead << " Samples From " << FileName << std::endl;
-
-    File = std::ifstream(FileName);
-    std::string Line;
-    py::list intvec;
-
-    if (File.is_open()) {
-        std::cout << "Loading (Up To) " << MaxSamples << " Samples." << std::endl;
-    }
-    else {
-        std::cout << "Failed To Open File." << std::endl;
-        return FileData;
-    }
-
-    while (std::getline(File, Line)) {
-        if (samplesToRead > 0) {
-            Line.erase(Line.begin(), Line.begin() + 2);
-            Line.erase(Line.end() - 1, Line.end());
-            try {
-                intvec = pickle(base64decode(Line));
-            }
-            catch (py::error_already_set& e) {
-                std::cout << "Error In Parsing Base64 Data." << std::endl;
-                continue;
-            }
-            intvec.insert(0, startToken);
-            intvec.insert(intvec.size(), endToken);
-
-			if (intvec.size() < sampleLength) {
-				for (int i = intvec.size(); i < sampleLength; i++) {
-					intvec.append(paddingValue);
-				}
-			}
-
-			if (intvec.size() > sampleLength) {
-				for (int i = intvec.size() - 2; i > sampleLength - 2; i--) {
-					intvec.attr("pop")(i);
-				}
-			}
-
-			if (intvec.size() != sampleLength) {
-				std::cout << intvec.size() << std::endl;
-			}
-
-            FileData.push_back(intvec);
-            samplesToRead--;
-            CurrentLine++;
-            if (CurrentLine % ProgressReportInterval == 0) {
-                std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
-            }
-        }
-        else {
-            std::cout << "All Samples Loaded." << std::endl;
-            break;
-        }
-
-    }
-
-    File.close();
-    std::cout << "Samples Have Been Read." << std::endl;
-    EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-    TimeTaken = (EndTime - StartTime) / 1000000000;
-    std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
-    return FileData;
-};
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-// current - THIS CODE DOES NOT FUNCTION CORRECTLY DO NO USE
-
-std::vector<py::list> LoadTrainDataST_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
-	std::cout << "WARNING THI FUNCTION MIGHT NOT WORK AS INTENDED DO NOT USE PROPERLY." << std::endl;
-	std::vector<py::list> FileData;
-	if (samplesToRead < 100) {
-		std::cout << "Please Specify A MINIMUM Of 100 Samples To Load." << std::endl;
-		return FileData;
-	}
+	// Time keeping variables.
 	int64_t StartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	int64_t EndTime;
 	int64_t TimeTaken;
+	// Samples & File Data Variables.
+	std::vector<py::list> LoadedSamples;
 	std::string FileName = dataPath + tokenizerName;
 	std::ifstream File;
+	std::string FileDataSectionBuffer;
+	uint64_t NumberOfSamplesInFile;
+	uint64_t FileHeaderSectionLength; // Length of the section not including the length of the uint64_t val that indicates length.
+	uint64_t FileDataSectionLength;
+	uint64_t FileLength;
+	std::vector<BIN::SampleHeaderData> SamplesMetadata;
+	// Sample Processing Variables.
+	std::vector<int> SampleFromFileDataBuffer_int32;
+	std::vector<uint16_t> SampleFromFileDataBuffer_int16;
+	// Progress tracking variables.
 	int64_t MaxSamples = samplesToRead;
 	int64_t CurrentLine = 0;
 	int64_t ProgressReportInterval = MaxSamples / 100;
 
-	std::cout << "Loading " << samplesToRead << " Samples From " << FileName << std::endl;
+	// Open the file and query number of samples.
+	File = std::ifstream(FileName, std::ios::binary | std::ios::ate);
+	FileLength = File.tellg();
+	File.seekg(0);
+	File.read((char*)&FileHeaderSectionLength, sizeof(uint64_t));
+	File.seekg(8);
+	File.read((char*)&NumberOfSamplesInFile, sizeof(uint64_t));
 
-	File = std::ifstream(FileName);
-	std::string Line;
-	std::string tmpstr;
-	std::vector<int> intvec;
-	
+	// Logic for handling a file that has less samples than user requested.
+	if (samplesToRead > NumberOfSamplesInFile) {
+		std::cout << "This File Does Not Contain Enough Samples, Loading " << NumberOfSamplesInFile << " Samples Instead." << std::endl;
+		samplesToRead = NumberOfSamplesInFile;
+		MaxSamples = samplesToRead;
+		ProgressReportInterval = MaxSamples / 100;
+	} else std::cout << "Loading " << samplesToRead << " Samples From " << FileName << std::endl;
 
-	if (File.is_open()) {
-		std::cout << "Loading (Up To) " << MaxSamples << " Samples." << std::endl;
-	} 
-	else {
-		std::cout << "Failed To Open File." << std::endl;
-		return FileData;
-	}
+	std::cout << "Loading File Header." << std::endl;
+	// Loading the file header contents to a vector.
+	SamplesMetadata.resize(NumberOfSamplesInFile);
+	File.seekg(16);
+	File.read((char*)SamplesMetadata.data(), sizeof(BIN::SampleHeaderData) * NumberOfSamplesInFile);
+	std::cout << "File Header Loaded." << std::endl;
+	std::cout << "Number Of Samples In File " << NumberOfSamplesInFile << std::endl;
 
-	
-	int tmpint;
-	while (std::getline(File, Line)) {
+	// Query the file data section length.
+	FileDataSectionLength = FileLength - FileHeaderSectionLength;
+
+	// Load the file data section into a buffer.
+	FileDataSectionBuffer.resize(FileDataSectionLength);
+	File.seekg(FileHeaderSectionLength);
+	File.read(FileDataSectionBuffer.data(), FileDataSectionLength);
+
+	// Iterate over the metadata to attain each sample from the file and process it.
+	for (BIN::SampleHeaderData& metadata : SamplesMetadata) {
 		if (samplesToRead > 0) {
-			py::list PythonList;
-			tmpstr = base64::from_base64(Line);
-			intvec.resize(tmpstr.size() / 4);
-			memcpy(intvec.data(), tmpstr.data(), sizeof(tmpstr[0]) * tmpstr.length());
+			// Initialise a new py::list for the data
+			py::list SampleData;
+			if (metadata.dtypeint16 == 0) {
+				// Resize the buffer to take in the file data.
+				SampleFromFileDataBuffer_int32.resize(metadata.SampleLength / 4);
 
-			for (int& integer : intvec) {
-				PythonList.append(integer);
+				// Seek to position of the sample in file and read it.
+				File.seekg(FileHeaderSectionLength + metadata.OffsetFromDataSectionStart + 8);
+				File.read((char*)SampleFromFileDataBuffer_int32.data(), sampleLength);
 			}
 
-			FileData.emplace_back(PythonList);
+			if (metadata.dtypeint16 == 1) {
+				// Resize the buffer to take in the file data.
+				SampleFromFileDataBuffer_int16.resize(metadata.SampleLength / 2);
 
+				// Seek to position of the sample in file and read it.
+				File.seekg(FileHeaderSectionLength + metadata.OffsetFromDataSectionStart + 8);
+				File.read((char*)SampleFromFileDataBuffer_int16.data(), sampleLength);
+
+				// Resize and populate 32 bit int array.
+				SampleFromFileDataBuffer_int32.resize(SampleFromFileDataBuffer_int16.size());
+				for (size_t i = 0; i < SampleFromFileDataBuffer_int16.size(); i++) {
+					SampleFromFileDataBuffer_int32[i] = static_cast<int>(SampleFromFileDataBuffer_int16[i]);
+				}
+			}
+
+			// Apply padding & start + finish tokens.
+			SampleFromFileDataBuffer_int32.emplace(SampleFromFileDataBuffer_int32.begin(), startToken);
+			SampleFromFileDataBuffer_int32.push_back(endToken);
+
+			for (size_t i = SampleFromFileDataBuffer_int32.size(); i < sampleLength; i++) {
+				SampleFromFileDataBuffer_int32.push_back(paddingValue);
+			}
+			
+			//Convert sample to py::list
+			for (size_t i = 0; i < SampleFromFileDataBuffer_int32.size(); i++) {
+				SampleData.append(SampleFromFileDataBuffer_int32[i]);
+			}
+
+			// append the sample to the return array.
+			LoadedSamples.push_back(SampleData);
+
+			//Modify some loop variables.
 			samplesToRead--;
-			CurrentLine++;
-			if (CurrentLine % ProgressReportInterval == 0) {
-				std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
-			}
 		}
-		else {
-			std::cout << "There Arent Enough Samples In File. But Avalible Samples Were Loaded." << std::endl;
-			break;
-		}
-
+		else break;
+		
+		
 	}
 
 	File.close();
@@ -173,11 +113,11 @@ std::vector<py::list> LoadTrainDataST_Future(int64_t samplesToRead, std::string 
 	EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	TimeTaken = (EndTime - StartTime) / 1000000000;
 	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
-	return FileData;
+	return LoadedSamples;
 };
 
-void SaveDataST_Future(std::vector<std::vector<int>> Data, std::string FileName) {
-	std::cout << "WARNING THI FUNCTION MIGHT NOT WORK AS INTENDED DO NOT USE PROPERLY." << std::endl;
+void SaveTrainDataST(std::vector<std::vector<int>> Data, std::string FileName) {
+	std::cout << "WARNING THI FUNCTION DOES NOT WORK AS INTENDED DO NOT USE PROPERLY." << std::endl;
 	std::ofstream File(FileName, std::ios::binary | std::ios::out | std::ios::app);
 	std::cout << "File Created." << std::endl;
 

@@ -2,6 +2,7 @@
 
 std::mutex LockThreadsForWrite;
 
+// Needs ground up re write.
 std::vector<py::list> DataLoadAndParseThread(int64_t samplesToRead, std::string Buffer, int startToken, int endToken, int sampleLength, int paddingValue, int threadId) {
 	std::cout << "Thread " << threadId << " Starting."<< std::endl;
 	std::vector<py::list> FileData;
@@ -67,7 +68,7 @@ std::vector<py::list> DataLoadAndParseThread(int64_t samplesToRead, std::string 
 };
 
 
-std::vector<py::list> LoadTrainDataMT_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
+std::vector<py::list> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
 	std::vector<std::thread> ProcessingThreads;
 	std::vector<py::list> Data;
 	std::string FileName = dataPath + tokenizerName;
