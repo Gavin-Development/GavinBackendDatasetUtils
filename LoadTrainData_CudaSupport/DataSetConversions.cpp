@@ -99,6 +99,7 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 			}
 		}
 		else break;
+		
 
 
 	}

@@ -1,6 +1,6 @@
 ﻿#include "DataLoader.hpp"
 
-std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
+std::vector<py::list> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
 	// Time keeping variables.
 	int64_t StartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	int64_t EndTime;
@@ -14,14 +14,15 @@ std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPat
 	uint64_t FileHeaderSectionLength; // Length of the section not including the length of the uint64_t val that indicates length.
 	uint64_t FileDataSectionLength;
 	uint64_t FileLength;
+	uint64_t FileDataLengthToLoad;
 	std::vector<BIN::SampleHeaderData> SamplesMetadata;
 	// Sample Processing Variables.
 	std::vector<int> SampleFromFileDataBuffer_int32;
 	std::vector<uint16_t> SampleFromFileDataBuffer_int16;
 	// Progress tracking variables.
-	int64_t MaxSamples = samplesToRead;
-	int64_t CurrentLine = 0;
-	int64_t ProgressReportInterval = MaxSamples / 100;
+	uint64_t MaxSamples = samplesToRead;
+	uint64_t CurrentLine = 0;
+	uint64_t ProgressReportInterval = MaxSamples / 100;
 
 	// Open the file and query number of samples.
 	File = std::ifstream(FileName, std::ios::binary | std::ios::ate);
@@ -40,79 +41,80 @@ std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPat
 	} else std::cout << "Loading " << samplesToRead << " Samples From " << FileName << std::endl;
 
 	std::cout << "Loading File Header." << std::endl;
+
 	// Loading the file header contents to a vector.
-	SamplesMetadata.resize(NumberOfSamplesInFile);
+	SamplesMetadata.resize(samplesToRead);
 	File.seekg(16);
-	File.read((char*)SamplesMetadata.data(), sizeof(BIN::SampleHeaderData) * NumberOfSamplesInFile);
+	File.read((char*)SamplesMetadata.data(), sizeof(BIN::SampleHeaderData) * samplesToRead);
 	std::cout << "File Header Loaded." << std::endl;
 	std::cout << "Number Of Samples In File " << NumberOfSamplesInFile << std::endl;
 
 	// Query the file data section length.
 	FileDataSectionLength = FileLength - FileHeaderSectionLength;
 
+	// This is the IO & Memory efficient implimentation.
+
+	// Set the length to the last sample + its length (almost totaled this up as a loop smh...)
+	FileDataLengthToLoad = SamplesMetadata[SamplesMetadata.size() - 1].OffsetFromDataSectionStart + SamplesMetadata[SamplesMetadata.size() - 1].SampleLength;
+		
 	// Load the file data section into a buffer.
-	FileDataSectionBuffer.resize(FileDataSectionLength);
+	FileDataSectionBuffer.resize(FileDataLengthToLoad);
 	File.seekg(FileHeaderSectionLength);
-	File.read(FileDataSectionBuffer.data(), FileDataSectionLength);
+	File.read(FileDataSectionBuffer.data(), FileDataLengthToLoad);
 
 	// Iterate over the metadata to attain each sample from the file and process it.
 	for (BIN::SampleHeaderData& metadata : SamplesMetadata) {
-		if (samplesToRead > 0) {
-			// Initialise a new py::list for the data
-			py::list SampleData;
-			if (metadata.dtypeint16 == 0) {
-				// Resize the buffer to take in the file data.
-				SampleFromFileDataBuffer_int32.resize(metadata.SampleLength / 4);
+		// Initialise a new py::list for the data
+		py::list SampleData;
+		if (metadata.dtypeint16 == 0) {
+			// Resize the buffer to take in the file data.
+			SampleFromFileDataBuffer_int32.resize(metadata.SampleLength / 4);
 
-				// Seek to position of the sample in file and read it.
-				File.seekg(FileHeaderSectionLength + metadata.OffsetFromDataSectionStart + 8);
-				File.read((char*)SampleFromFileDataBuffer_int32.data(), sampleLength);
-			}
+			// Seek to position of the sample in file and read it.
+			File.seekg(FileHeaderSectionLength + metadata.OffsetFromDataSectionStart + 8);
+			File.read((char*)SampleFromFileDataBuffer_int32.data(), sampleLength);
+		}
 
-			if (metadata.dtypeint16 == 1) {
-				// Resize the buffer to take in the file data.
-				SampleFromFileDataBuffer_int16.resize(metadata.SampleLength / 2);
+		if (metadata.dtypeint16 == 1) {
+			// Resize the buffer to take in the file data.
+			SampleFromFileDataBuffer_int16.resize(metadata.SampleLength / 2);
 
-				// Seek to position of the sample in file and read it.
-				File.seekg(FileHeaderSectionLength + metadata.OffsetFromDataSectionStart + 8);
-				File.read((char*)SampleFromFileDataBuffer_int16.data(), sampleLength);
+			// Seek to position of the sample in file and read it.
+			File.seekg(FileHeaderSectionLength + metadata.OffsetFromDataSectionStart + 8);
+			File.read((char*)SampleFromFileDataBuffer_int16.data(), sampleLength);
 
-				// Resize and populate 32 bit int array.
-				SampleFromFileDataBuffer_int32.resize(SampleFromFileDataBuffer_int16.size());
-				for (size_t i = 0; i < SampleFromFileDataBuffer_int16.size(); i++) {
-					SampleFromFileDataBuffer_int32[i] = static_cast<int>(SampleFromFileDataBuffer_int16[i]);
-				}
-			}
-
-			// Apply padding & start + finish tokens.
-			SampleFromFileDataBuffer_int32.emplace(SampleFromFileDataBuffer_int32.begin(), startToken);
-			SampleFromFileDataBuffer_int32.push_back(endToken);
-
-			for (size_t i = SampleFromFileDataBuffer_int32.size(); i < sampleLength; i++) {
-				SampleFromFileDataBuffer_int32.push_back(paddingValue);
-			}
-			
-			//Convert sample to py::list
-			for (size_t i = 0; i < SampleFromFileDataBuffer_int32.size(); i++) {
-				SampleData.append(SampleFromFileDataBuffer_int32[i]);
-			}
-
-			// append the sample to the return array.
-			LoadedSamples.push_back(SampleData);
-
-			//Modify some loop variables.
-			samplesToRead--;
-			CurrentLine++;
-
-			// Report progress (if neccesary)
-			if (CurrentLine % ProgressReportInterval == 0) {
-				std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
+			// Resize and populate 32 bit int array.
+			SampleFromFileDataBuffer_int32.resize(SampleFromFileDataBuffer_int16.size());
+			for (size_t i = 0; i < SampleFromFileDataBuffer_int16.size(); i++) {
+				SampleFromFileDataBuffer_int32[i] = static_cast<int>(SampleFromFileDataBuffer_int16[i]);
 			}
 		}
-		else break;
-		
-		
+
+		// Apply padding & start + finish tokens.
+		SampleFromFileDataBuffer_int32.emplace(SampleFromFileDataBuffer_int32.begin(), startToken);
+		SampleFromFileDataBuffer_int32.push_back(endToken);
+
+		for (size_t i = SampleFromFileDataBuffer_int32.size(); i < sampleLength; i++) {
+			SampleFromFileDataBuffer_int32.push_back(paddingValue);
+		}
+
+		//Convert sample to py::list
+		for (size_t i = 0; i < SampleFromFileDataBuffer_int32.size(); i++) {
+			SampleData.append(SampleFromFileDataBuffer_int32[i]);
+		}
+
+		// append the sample to the return array.
+		LoadedSamples.push_back(SampleData);
+
+		//Modify some loop variables.
+		CurrentLine++;
+
+		// Report progress (if neccesary)
+		if (CurrentLine % ProgressReportInterval == 0) {
+			std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
+		}
 	}
+	
 
 	File.close();
 	std::cout << "Samples Have Been Read." << std::endl;
