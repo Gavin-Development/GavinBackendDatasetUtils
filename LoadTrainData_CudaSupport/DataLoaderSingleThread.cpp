@@ -102,6 +102,12 @@ std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPat
 
 			//Modify some loop variables.
 			samplesToRead--;
+			CurrentLine++;
+
+			// Report progress (if neccesary)
+			if (CurrentLine % ProgressReportInterval == 0) {
+				std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
+			}
 		}
 		else break;
 		
