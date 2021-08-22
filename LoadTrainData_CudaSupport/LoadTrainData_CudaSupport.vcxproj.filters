@@ -7,6 +7,9 @@
     <Filter Include="Header Files">
       <UniqueIdentifier>{4d026325-9af6-4455-a27f-64e8f4f43337}</UniqueIdentifier>
     </Filter>
+    <Filter Include="SourceFiles\Legacy">
+      <UniqueIdentifier>{25cf9f7c-a606-4433-b382-6074408e64ac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DataLoader.hpp">
@@ -28,6 +31,9 @@
     </ClCompile>
     <ClCompile Include="PythonFuncsDefinitions.cpp">
       <Filter>SourceFiles</Filter>
+    </ClCompile>
+    <ClCompile Include="DataLoaderLegacySupport.cpp">
+      <Filter>SourceFiles\Legacy</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

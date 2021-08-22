@@ -77,6 +77,7 @@
       <PreprocessorDefinitions>WIN32;WIN64;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(path);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <StructMemberAlignment>Default</StructMemberAlignment>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -100,6 +101,7 @@
     <CudaCompile Include="DataLoaderGPUAccelerated.cu">
       <FileType>Document</FileType>
     </CudaCompile>
+    <ClCompile Include="DataLoaderLegacySupport.cpp" />
     <ClCompile Include="DataLoaderMultiThread.cpp" />
     <ClCompile Include="DataLoaderSingleThread.cpp" />
     <ClCompile Include="DataSetConversions.cpp" />

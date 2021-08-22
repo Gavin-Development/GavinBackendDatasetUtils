@@ -30,15 +30,23 @@ struct GPU_Accelerated_Line {
 
 // Legacy
 
-std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
+std::vector<py::list> LoadTrainDataST_Legacy(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 
 //future
 
-std::vector<py::list> LoadTrainDataST_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
-std::vector<py::list> LoadTrainDataMT_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
+std::vector<py::list> LoadTrainDataST(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
+std::vector<py::list> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 std::vector<py::list> LoadTrainDataGPU_Accelerated_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 
-void SaveDataST_Future(std::vector<std::vector<int>> Data, std::string FileName);
+void SaveTrainDataST(std::vector<std::vector<int>> Data, std::string FileName);
 
 void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::string fileToSave);
 
+
+namespace BIN {
+	struct SampleHeaderData {
+		uint64_t alignas(uint64_t) OffsetFromDataSectionStart;
+		uint16_t alignas(uint16_t) SampleLength;
+		uint8_t alignas(uint8_t) dtypeint16;
+	};
+};
