@@ -1,12 +1,12 @@
 ﻿#include "DataLoader.hpp"
 
-std::vector<py::list> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
+py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
 	// Time keeping variables.
 	int64_t StartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	int64_t EndTime;
 	int64_t TimeTaken;
 	// Samples & File Data Variables.
-	std::vector<py::list> LoadedSamples;
+	py::list LoadedSamples;
 	std::string FileName = dataPath + tokenizerName;
 	std::ifstream File;
 	std::string FileDataSectionBuffer;
@@ -104,7 +104,7 @@ std::vector<py::list> LoadTrainDataST(uint64_t samplesToRead, std::string dataPa
 		}
 
 		// append the sample to the return array.
-		LoadedSamples.push_back(SampleData);
+		LoadedSamples.append(SampleData);
 
 		//Modify some loop variables.
 		CurrentLine++;

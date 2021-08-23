@@ -2,6 +2,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
+#include <pybind11/numpy.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -19,7 +20,9 @@
 #include "base64.hpp"
 
 //PYBIND11_MAKE_OPAQUE(std::vector<int>);
-
+// https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
+// https://stackoverflow.com/questions/44659924/returning-numpy-arrays-via-pybind11
+// For implimenting native numpy arrays to speed the fuck up outta this array shit (mainly for downstream speed).
 namespace py = pybind11;
 
 struct GPU_Accelerated_Line {
@@ -34,7 +37,7 @@ std::vector<py::list> LoadTrainDataST_Legacy(int64_t samplesToRead, std::string 
 
 //future
 
-std::vector<py::list> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
+py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 std::vector<py::list> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 std::vector<py::list> LoadTrainDataGPU_Accelerated_Future(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 
