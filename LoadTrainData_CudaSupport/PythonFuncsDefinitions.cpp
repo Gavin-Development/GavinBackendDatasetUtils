@@ -15,7 +15,6 @@ PYBIND11_MODULE(LoadTrainData_CudaSupport, handle) {
     handle.def("LoadTrainDataST_Legacy", &LoadTrainDataST_Legacy);
     handle.def("LoadTrainDataMT", &LoadTrainDataMT);
     handle.def("LoadTrainDataST", &LoadTrainDataST);
-    handle.def("LoadTrainDataGPU_Accelerated_Future", &LoadTrainDataGPU_Accelerated_Future);
     handle.def("SaveTrainDataST", &SaveTrainDataST);
 
     handle.def("ConvertDataSet_TEST", &ConvertToBinFormat);
