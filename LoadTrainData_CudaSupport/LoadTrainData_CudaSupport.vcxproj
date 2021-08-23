@@ -98,9 +98,6 @@
     <ClInclude Include="DataLoader.hpp" />
   </ItemGroup>
   <ItemGroup>
-    <CudaCompile Include="DataLoaderGPUAccelerated.cu">
-      <FileType>Document</FileType>
-    </CudaCompile>
     <ClCompile Include="DataLoaderLegacySupport.cpp" />
     <ClCompile Include="DataLoaderMultiThread.cpp" />
     <ClCompile Include="DataLoaderSingleThread.cpp" />

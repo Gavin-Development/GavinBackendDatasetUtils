@@ -36,9 +36,4 @@
       <Filter>SourceFiles\Legacy</Filter>
     </ClCompile>
   </ItemGroup>
-  <ItemGroup>
-    <CudaCompile Include="DataLoaderGPUAccelerated.cu">
-      <Filter>SourceFiles</Filter>
-    </CudaCompile>
-  </ItemGroup>
 </Project>

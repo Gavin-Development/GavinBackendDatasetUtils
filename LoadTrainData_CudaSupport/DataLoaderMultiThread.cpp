@@ -9,6 +9,7 @@ void LoadDataThread(uint64_t SamplesToRead, uint64_t FileHeaderSectionLength, si
 
 		for (size_t i = ThreadId * SamplesToRead; i < (ThreadId * SamplesToRead) + SamplesToRead; i++) {
 			SampleWritePos = (ThreadId * SamplesToRead * sampleLength) + (sampleLength * NumberOfSamplesRead); // Thread offset in the mallocd array then the sample offset.
+			
 
 			if (SamplesMetadata[i].dtypeint16 == 0) {
 				// Resize the 32bit int vector.
@@ -118,15 +119,21 @@ py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, st
 
 	// Launch Threads.
 	for (size_t i = 0; i < NumberOfThreadsToUse; i++) {
-		std::cout << "Thread Launched. " << i << std::endl;
 		DataLoaderThreads.push_back(std::thread(LoadDataThread, SamplesToReadPerThread, FileHeaderSectionLength, i, FileName, MultiThreadDataBuffer, SamplesMetadata, startToken, endToken, sampleLength, paddingValue));
 	}
-	std::cout << "Thread Launches Done." << std::endl;
+
+	// Wait for threads to finish.
 	for (std::thread& th : DataLoaderThreads) {
 		th.join();
 	}
-	//{ SamplesToReadPerThread * NumberOfThreadsToUse, sampleLength, 1},{1000 * 8 * 1000, 1000 * 8, 8},
-	std::cout << "Data Loaded." << std::endl; //SamplesToReadPerThread * NumberOfThreadsToUse * sampleLength
+
+	// Clean up some heap allocated variables.
+	free(SamplesMetadata);
+
+	// Put the object inside a capsule to manage its data incase it goes out of scope in the python program and to return it as a numpy array without a copy!
+	EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+	TimeTaken = (EndTime - StartTime) / 1000000000;
+	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
 	py::capsule capsule = py::capsule(MultiThreadDataBuffer, [](void* MultiThreadedDataBuffer) { delete reinterpret_cast<std::vector<int>*>(MultiThreadedDataBuffer); });
 	py::array_t<int> LoadedSamples(
 		{ (int64_t)SamplesToReadPerThread * (int64_t)NumberOfThreadsToUse, (int64_t)sampleLength },
