@@ -59,29 +59,27 @@ py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::stri
 		
 	// Load the file data section into a buffer.
 	FileDataSectionBuffer.resize(FileDataLengthToLoad);
-	File.seekg(FileHeaderSectionLength);
+	File.seekg(FileHeaderSectionLength + 8);
 	File.read(FileDataSectionBuffer.data(), FileDataLengthToLoad);
 
 	// Iterate over the metadata to attain each sample from the file and process it.
 	for (BIN::SampleHeaderData& metadata : SamplesMetadata) {
-		// Initialise a new py::list for the data
+		// Initialise a new py::list for the data.
 		py::list SampleData;
 		if (metadata.dtypeint16 == 0) {
 			// Resize the buffer to take in the file data.
 			SampleFromFileDataBuffer_int32.resize(metadata.SampleLength / 4);
 
-			// Seek to position of the sample in file and read it.
-			File.seekg(FileHeaderSectionLength + metadata.OffsetFromDataSectionStart + 8);
-			File.read((char*)SampleFromFileDataBuffer_int32.data(), sampleLength);
+			// memcpy from the samples position in the buffer.
+			memcpy(SampleFromFileDataBuffer_int32.data(), &FileDataSectionBuffer[metadata.OffsetFromDataSectionStart], metadata.SampleLength);
 		}
 
 		if (metadata.dtypeint16 == 1) {
 			// Resize the buffer to take in the file data.
 			SampleFromFileDataBuffer_int16.resize(metadata.SampleLength / 2);
 
-			// Seek to position of the sample in file and read it.
-			File.seekg(FileHeaderSectionLength + metadata.OffsetFromDataSectionStart + 8);
-			File.read((char*)SampleFromFileDataBuffer_int16.data(), sampleLength);
+			// memcpy from the samples position in the buffer.
+			memcpy(SampleFromFileDataBuffer_int16.data(), &FileDataSectionBuffer[metadata.OffsetFromDataSectionStart], metadata.SampleLength);
 
 			// Resize and populate 32 bit int array.
 			SampleFromFileDataBuffer_int32.resize(SampleFromFileDataBuffer_int16.size());
@@ -90,8 +88,11 @@ py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::stri
 			}
 		}
 
-		// Apply padding & start + finish tokens.
+		// Apply padding & start + finish tokens & trim / pad array.
 		SampleFromFileDataBuffer_int32.emplace(SampleFromFileDataBuffer_int32.begin(), startToken);
+		if (SampleFromFileDataBuffer_int32.size() >= sampleLength) {
+			SampleFromFileDataBuffer_int32.resize(sampleLength);
+		}
 		SampleFromFileDataBuffer_int32.push_back(endToken);
 
 		for (size_t i = SampleFromFileDataBuffer_int32.size(); i < sampleLength; i++) {
