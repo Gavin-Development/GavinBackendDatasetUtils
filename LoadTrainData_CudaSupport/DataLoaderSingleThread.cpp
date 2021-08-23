@@ -1,12 +1,12 @@
 ﻿#include "DataLoader.hpp"
 
-py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
+py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue) {
 	// Time keeping variables.
 	int64_t StartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	int64_t EndTime;
 	int64_t TimeTaken;
 	// Samples & File Data Variables.
-	py::list LoadedSamples;
+	int* LoadedSamples;
 	std::string FileName = dataPath + tokenizerName;
 	std::ifstream File;
 	std::string FileDataSectionBuffer;
@@ -40,6 +40,9 @@ py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::stri
 		ProgressReportInterval = MaxSamples / 100;
 	} else std::cout << "Loading " << samplesToRead << " Samples From " << FileName << std::endl;
 
+	// Malloc the loaded samples array to contain the samples that are loaded.
+	LoadedSamples = (int*)malloc(sizeof(int) * samplesToRead * sampleLength);
+
 	std::cout << "Loading File Header." << std::endl;
 
 	// Loading the file header contents to a vector.
@@ -64,8 +67,7 @@ py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::stri
 
 	// Iterate over the metadata to attain each sample from the file and process it.
 	for (BIN::SampleHeaderData& metadata : SamplesMetadata) {
-		// Initialise a new py::list for the data.
-		py::list SampleData;
+
 		if (metadata.dtypeint16 == 0) {
 			// Resize the buffer to take in the file data.
 			SampleFromFileDataBuffer_int32.resize(metadata.SampleLength / 4);
@@ -99,13 +101,8 @@ py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::stri
 			SampleFromFileDataBuffer_int32.push_back(paddingValue);
 		}
 
-		//Convert sample to py::list
-		for (size_t i = 0; i < SampleFromFileDataBuffer_int32.size(); i++) {
-			SampleData.append(SampleFromFileDataBuffer_int32[i]);
-		}
-
 		// append the sample to the return array.
-		LoadedSamples.append(SampleData);
+		memcpy(&LoadedSamples[CurrentLine * sampleLength], SampleFromFileDataBuffer_int32.data(), sizeof(int) * SampleFromFileDataBuffer_int32.size());
 
 		//Modify some loop variables.
 		CurrentLine++;
@@ -117,12 +114,20 @@ py::list LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::stri
 	}
 	
 
+	// Close the file and print out how long it took to load the data.
 	File.close();
 	std::cout << "Samples Have Been Read." << std::endl;
 	EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	TimeTaken = (EndTime - StartTime) / 1000000000;
 	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
-	return LoadedSamples;
+
+	// Encapsulate data into a numpy array for transfer back to python.
+	py::capsule capsule = py::capsule(LoadedSamples, [](void* LoadedSamples) { delete reinterpret_cast<std::vector<int>*>(LoadedSamples); });
+	py::array_t<int> SamplesReturnArray(
+		{ (int64_t)samplesToRead, (int64_t)sampleLength },
+		LoadedSamples,
+		capsule);
+	return SamplesReturnArray;
 };
 
 void SaveTrainDataST(std::vector<std::vector<int>> Data, std::string FileName) {
