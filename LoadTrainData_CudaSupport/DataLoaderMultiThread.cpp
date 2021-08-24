@@ -7,13 +7,15 @@ void LoadDataThread(uint64_t SamplesToRead, uint64_t FileHeaderSectionLength, si
 	size_t BytesToRead;
 	size_t PositionOfEndTokenWrite;
 	int* SampleFromFileDataBuffer_int32 = (int*)malloc(sizeof(int) * sampleLength);
-	uint16_t* SampleFromFileDataBuffer_int16 = (uint16_t*)malloc(sizeof(uint16_t) * sampleLength);
+	uint16_t* SampleFromFileDataBuffer_int16 = (uint16_t*)malloc(sizeof(uint16_t) * (sampleLength - 2));
 
 	for (size_t i = ThreadId * SamplesToRead; i < (ThreadId * SamplesToRead) + SamplesToRead; i++) {
 		// setup some values.
 		SampleWritePos = (ThreadId * SamplesToRead * sampleLength) + (sampleLength * NumberOfSamplesRead); // Thread offset in the mallocd array then the sample offset.
-			
-		for (size_t j = 0; j < sampleLength; j++) {
+		
+		// Apply start token and pad the 32 bit array.
+		SampleFromFileDataBuffer_int32[0] = startToken;
+		for (size_t j = 1; j < sampleLength; j++) {
 			SampleFromFileDataBuffer_int32[j] = paddingValue;
 		}
 
@@ -23,7 +25,7 @@ void LoadDataThread(uint64_t SamplesToRead, uint64_t FileHeaderSectionLength, si
 			File.seekg(FileHeaderSectionLength + SamplesMetadata[i].OffsetFromDataSectionStart + 8);
 
 			// Set bytes to read then do a check to ensure full loading of the sequence.
-			BytesToRead = sizeof(int) * sampleLength - (sizeof(int) * 2);
+			BytesToRead = sizeof(int) * (sampleLength - 2);
 			if (SamplesMetadata[i].SampleLength < BytesToRead) {
 				BytesToRead = SamplesMetadata[i].SampleLength;
 			}
@@ -42,27 +44,26 @@ void LoadDataThread(uint64_t SamplesToRead, uint64_t FileHeaderSectionLength, si
 			File.seekg(FileHeaderSectionLength + SamplesMetadata[i].OffsetFromDataSectionStart + 8);
 
 			// set bytes to read then do a check to ensure full loading of the sequence.
-			BytesToRead = sizeof(uint16_t) * sampleLength - (sizeof(uint16_t) * 2);
+			BytesToRead = sizeof(uint16_t) * (sampleLength - 2);
 			if (SamplesMetadata[i].SampleLength < BytesToRead) {
 				BytesToRead = SamplesMetadata[i].SampleLength;
 			}
-			File.read((char*)&SampleFromFileDataBuffer_int16[1], BytesToRead);
+			File.read((char*)SampleFromFileDataBuffer_int16, BytesToRead);
 
 			// Cast the 16 bit values to the 32 bit array.
 			for (size_t j = 0; j < sampleLength; j++) {
-				SampleFromFileDataBuffer_int32[j] = static_cast<int>(SampleFromFileDataBuffer_int16[j]);
+				SampleFromFileDataBuffer_int32[j + 1] = static_cast<int>(SampleFromFileDataBuffer_int16[j]);
 			}
 			PositionOfEndTokenWrite = (BytesToRead / 2) + 1;
 
 		}
 
-		// Apply padding & start + end token & trim / pad array.
-		SampleFromFileDataBuffer_int32[0] =  startToken;
+		// Apply end token.
 		SampleFromFileDataBuffer_int32[PositionOfEndTokenWrite] = endToken;
 
 
 		//Copy the contents into the thread return memory buffer.
-		memcpy(&SamplesArray[SampleWritePos], SampleFromFileDataBuffer_int32, sampleLength);
+		memcpy(&SamplesArray[SampleWritePos], SampleFromFileDataBuffer_int32, sampleLength * sizeof(int));
 		NumberOfSamplesRead++;
 	}
 };
