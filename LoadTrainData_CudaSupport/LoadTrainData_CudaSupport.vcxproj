@@ -78,6 +78,7 @@
       <AdditionalIncludeDirectories>$(path);%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
       <StructMemberAlignment>Default</StructMemberAlignment>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
