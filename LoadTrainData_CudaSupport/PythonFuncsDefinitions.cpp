@@ -1,11 +1,7 @@
 #include "DataLoader.hpp"
 
 int InitModule() {
-    std::cout << "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------" << std::endl;
-    std::cout << "This module is currently undergoing active development. Please only use the function 'LoadTrainDataST'" << std::endl;
-    std::cout << "Example use for this function is as follows, testlist = LTD.LoadTrainDataST(10000000, 'C:/Users/User/Desktop/Gavin/GavinTraining/', 'Tokenizer-3.to', 69108,66109, 52, 0)" << std::endl;
-    std::cout << "This will open the file and load 10000000 samples with start token 69108 and end token 69109 with width 52 and padding value 0." << std::endl;
-    std::cout << "-------------------------------------------------------------------------------------------------------------------------------------------------------------------------" << std::endl;
+    std::cout << "GavinBackendDataSetTools Loaded. Please see readme.md for usage." << std::endl;
     return 0;
 }
 

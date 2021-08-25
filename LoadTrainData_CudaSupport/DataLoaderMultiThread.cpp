@@ -19,7 +19,7 @@ void LoadDataThread(uint64_t SamplesToRead, uint64_t FileHeaderSectionLength, si
 			SampleFromFileDataBuffer_int32[j] = paddingValue;
 		}
 
-		if (SamplesMetadata[i].dtypeint16 == 0) {
+		if (SamplesMetadata[i].dtypeint16 == BIN_FILE_DTYPE_INT32) {
 
 			// Seek to position of the sample in the file.
 			File.seekg(FileHeaderSectionLength + SamplesMetadata[i].OffsetFromDataSectionStart + 8);
@@ -33,7 +33,7 @@ void LoadDataThread(uint64_t SamplesToRead, uint64_t FileHeaderSectionLength, si
 			PositionOfEndTokenWrite = (BytesToRead / 4) + 1;
 		}
 
-		if (SamplesMetadata[i].dtypeint16 == 1) {
+		if (SamplesMetadata[i].dtypeint16 == BIN_FILE_DTYPE_INT16) {
 
 			// reset the malloced array to 0 values for padding.
 			for (size_t j = 0; j < sampleLength; j++) {
