@@ -19,10 +19,11 @@
 
 #include "base64.hpp"
 
-//PYBIND11_MAKE_OPAQUE(std::vector<int>);
-// https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
-// https://stackoverflow.com/questions/44659924/returning-numpy-arrays-via-pybind11
-// For implimenting native numpy arrays to speed the fuck up outta this array shit (mainly for downstream speed).
+#define BIN_FILE_DTYPE_INT16  (uint8_t)1
+#define BIN_FILE_DTYPE_INT32  (uint8_t)0
+#define BIN_FILE_DTYPE_INT24  (uint8_t)2
+
+
 namespace py = pybind11;
 
 struct GPU_Accelerated_Line {

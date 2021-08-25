@@ -68,7 +68,7 @@ py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, s
 	// Iterate over the metadata to attain each sample from the file and process it.
 	for (BIN::SampleHeaderData& metadata : SamplesMetadata) {
 
-		if (metadata.dtypeint16 == 0) {
+		if (metadata.dtypeint16 == BIN_FILE_DTYPE_INT32) {
 			// Resize the buffer to take in the file data.
 			SampleFromFileDataBuffer_int32.resize(metadata.SampleLength / 4);
 
@@ -76,7 +76,7 @@ py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, s
 			memcpy(SampleFromFileDataBuffer_int32.data(), &FileDataSectionBuffer[metadata.OffsetFromDataSectionStart], metadata.SampleLength);
 		}
 
-		if (metadata.dtypeint16 == 1) {
+		if (metadata.dtypeint16 == BIN_FILE_DTYPE_INT16) {
 			// Resize the buffer to take in the file data.
 			SampleFromFileDataBuffer_int16.resize(metadata.SampleLength / 2);
 
