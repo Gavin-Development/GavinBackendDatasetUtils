@@ -17,11 +17,13 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 	// variables for converting & saving the data.
 	std::ofstream Outfile = std::ofstream(fileToSave, std::ios::app | std::ios::binary);
 	std::vector<int> EncodeVec_Int32;
+	std::vector<uint24_t> EncodedVec_Int24;
 	std::vector<uint16_t> EncodeVec_Int16;
 	std::vector<BIN::SampleHeaderData> FileHeaderContents;
 	std::vector<std::string> FileDataContents;
 	int64_t CurrentDataSectionOffset = 0;
 	bool int16compatible;
+	bool int24compatible;
 	std::string EncodeVectorString;
 
 
@@ -38,6 +40,7 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 		if (samplesToRead > 0) {
 			// Reset loop variables and prepare the line for base 64 decoding.
 			int16compatible = true;
+			int24compatible = true;
 			Line.erase(Line.begin(), Line.begin() + 2);
 			Line.erase(Line.end() - 1, Line.end());
 
@@ -56,6 +59,17 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 				}
 			}
 
+			// if int16 not compatible check int24.
+			if (!int16compatible) {
+				// checking if int24 compatibility is possible.
+				for (size_t i = 0; i < EncodeVec_Int32.size(); i++) {
+					if (EncodeVec_Int32[i] > UINT24_MAX) {
+						int24compatible = false;
+					}
+				}
+			}
+
+
 			if (int16compatible) {
 				// Cast the 32 bit array to a 16 bit representation.
 				EncodeVec_Int16.resize(EncodeVec_Int32.size());
@@ -68,7 +82,26 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 				FileDataContents.push_back(EncodeVectorString);
 				// Create a struct informing the program the offset, length & dtype of this sample in bytes.
 				BIN::SampleHeaderData Metadata;
-				Metadata.dtypeint16 = 1;
+				Metadata.dtypeint16 = BIN_FILE_DTYPE_INT16;
+				Metadata.SampleLength = FileDataContents[FileDataContents.size() - 1].size();
+				Metadata.OffsetFromDataSectionStart = CurrentDataSectionOffset;
+				FileHeaderContents.push_back(Metadata);
+				// Finally incriment the data section offset by the length of this sample in bytes.
+				CurrentDataSectionOffset = CurrentDataSectionOffset + FileDataContents[FileDataContents.size() - 1].size();
+			}
+			else if (int24compatible) {
+				//cast the 32 bit array to a 24 bit representation.
+				EncodedVec_Int24.resize(EncodeVec_Int32.size());
+				for (size_t i = 0; i < EncodedVec_Int24.size(); i++) {
+					EncodedVec_Int24[i] = EncodeVec_Int32[i];
+				}
+				// Convert this to a string.
+				EncodeVectorString.resize(EncodedVec_Int24.size() * sizeof(uint24_t) / sizeof(char));
+				memcpy(EncodeVectorString.data(), EncodedVec_Int24.data(), sizeof(EncodedVec_Int24[0]) * EncodedVec_Int24.size());
+				FileDataContents.push_back(EncodeVectorString);
+				// Create a struct informing the program the offset, length & dtype of this sample in bytes.
+				BIN::SampleHeaderData Metadata;
+				Metadata.dtypeint16 = BIN_FILE_DTYPE_INT24;
 				Metadata.SampleLength = FileDataContents[FileDataContents.size() - 1].size();
 				Metadata.OffsetFromDataSectionStart = CurrentDataSectionOffset;
 				FileHeaderContents.push_back(Metadata);
@@ -82,7 +115,7 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 				FileDataContents.push_back(EncodeVectorString);
 				// Create a struct informing the program the offset, length & dtype of this sample in bytes.
 				BIN::SampleHeaderData Metadata;
-				Metadata.dtypeint16 = 0;
+				Metadata.dtypeint16 = BIN_FILE_DTYPE_INT32;
 				Metadata.SampleLength = FileDataContents[FileDataContents.size() - 1].size();
 				Metadata.OffsetFromDataSectionStart = CurrentDataSectionOffset;
 				FileHeaderContents.push_back(Metadata);

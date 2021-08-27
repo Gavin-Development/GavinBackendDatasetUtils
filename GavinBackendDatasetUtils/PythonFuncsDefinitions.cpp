@@ -2,10 +2,11 @@
 
 int InitModule() {
     std::cout << "GavinBackendDataSetTools Loaded. Please see readme.md for usage." << std::endl;
+    std::cout << sizeof(uint24_t) << std::endl;
     return 0;
 }
 
-PYBIND11_MODULE(LoadTrainData_CudaSupport, handle) {
+PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
     InitModule();
     handle.doc() = "This module is a custom module written in c++ to accelerate dataset loading for Gavin Bot made by Josh (Scott Survivor)";
     handle.def("LoadTrainDataST_Legacy", &LoadTrainDataST_Legacy);

@@ -18,6 +18,7 @@ py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, s
 	std::vector<BIN::SampleHeaderData> SamplesMetadata;
 	// Sample Processing Variables.
 	std::vector<int> SampleFromFileDataBuffer_int32;
+	std::vector<uint24_t> SampleFromFileDataBuffer_int24;
 	std::vector<uint16_t> SampleFromFileDataBuffer_int16;
 	// Progress tracking variables.
 	uint64_t MaxSamples = samplesToRead;
@@ -76,7 +77,24 @@ py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, s
 			memcpy(SampleFromFileDataBuffer_int32.data(), &FileDataSectionBuffer[metadata.OffsetFromDataSectionStart], metadata.SampleLength);
 		}
 
+		if (metadata.dtypeint16 == BIN_FILE_DTYPE_INT24) {
+			// Resize the buffer to take in the file data.
+			SampleFromFileDataBuffer_int24.resize(metadata.SampleLength / 3);
+
+			// memcpy from the samples position in the buffer.
+			memcpy(SampleFromFileDataBuffer_int24.data(), &FileDataSectionBuffer[metadata.OffsetFromDataSectionStart], metadata.SampleLength);
+
+			// Resize and populate 32 bit int array.
+			SampleFromFileDataBuffer_int32.resize(SampleFromFileDataBuffer_int24.size());
+			for (size_t i = 0; i < SampleFromFileDataBuffer_int24.size(); i++) {
+				SampleFromFileDataBuffer_int32[i] = static_cast<int>(SampleFromFileDataBuffer_int24[i]);
+			}
+
+		}
+
 		if (metadata.dtypeint16 == BIN_FILE_DTYPE_INT16) {
+			std::cout << "Dtype uint24 Detected." << std::endl;
+			std::cout << CurrentLine << std::endl;
 			// Resize the buffer to take in the file data.
 			SampleFromFileDataBuffer_int16.resize(metadata.SampleLength / 2);
 

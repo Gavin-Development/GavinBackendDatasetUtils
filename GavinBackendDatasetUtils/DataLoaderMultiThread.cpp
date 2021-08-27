@@ -7,6 +7,7 @@ void LoadDataThread(uint64_t SamplesToRead, uint64_t FileHeaderSectionLength, si
 	size_t BytesToRead;
 	size_t PositionOfEndTokenWrite;
 	int* SampleFromFileDataBuffer_int32 = (int*)malloc(sizeof(int) * sampleLength);
+	uint24_t* SampleFromFileDataBuffer_int24 = (uint24_t*)malloc(sizeof(uint24_t) * (sampleLength - 2));
 	uint16_t* SampleFromFileDataBuffer_int16 = (uint16_t*)malloc(sizeof(uint16_t) * (sampleLength - 2));
 
 	for (size_t i = ThreadId * SamplesToRead; i < (ThreadId * SamplesToRead) + SamplesToRead; i++) {
@@ -33,10 +34,34 @@ void LoadDataThread(uint64_t SamplesToRead, uint64_t FileHeaderSectionLength, si
 			PositionOfEndTokenWrite = (BytesToRead / 4) + 1;
 		}
 
+		if (SamplesMetadata[i].dtypeint16 == BIN_FILE_DTYPE_INT24) {
+
+			// reset the malloced array to 0 values for padding.
+			for (size_t j = 0; j < (sampleLength - 2); j++) {
+				SampleFromFileDataBuffer_int24[j] = paddingValue;
+			}
+
+			// Seek to the position in the file of the sample.
+			File.seekg(FileHeaderSectionLength + SamplesMetadata[i].OffsetFromDataSectionStart + 8);
+
+			// set bytes to read then do a check to ensure full loading of the sequence.
+			BytesToRead = sizeof(uint24_t) * (sampleLength - 2);
+			if (SamplesMetadata[i].SampleLength < BytesToRead) {
+				BytesToRead = SamplesMetadata[i].SampleLength;
+			}
+			File.read((char*)SampleFromFileDataBuffer_int24, BytesToRead);
+
+			// Cast the 24 bit values to the 32 bit array.
+			for (size_t j = 0; j < (sampleLength - 2); j++) {
+				SampleFromFileDataBuffer_int32[j + 1] = static_cast<int>(SampleFromFileDataBuffer_int24[j]);
+			}
+			PositionOfEndTokenWrite = (BytesToRead / 3) + 1;
+		}
+
 		if (SamplesMetadata[i].dtypeint16 == BIN_FILE_DTYPE_INT16) {
 
 			// reset the malloced array to 0 values for padding.
-			for (size_t j = 0; j < sampleLength; j++) {
+			for (size_t j = 0; j < (sampleLength - 2); j++) {
 				SampleFromFileDataBuffer_int16[j] = paddingValue;
 			}
 
@@ -91,8 +116,15 @@ py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, st
 	uint64_t SamplesToReadPerThread;
 	uint64_t SamplesLaunched;
 
-	// Open the file and query number of samples.
+	// Open the file and query number of samples and verify the file is real.
 	File = std::ifstream(FileName, std::ios::binary | std::ios::ate);
+	if (!File.is_open()) {
+		// alert the user file does not exist.
+		std::cout << "Please specify a valid file." << std::endl;
+
+		// return an empty array as python expects a numpy return type.
+		return py::array_t<int> {0};
+	}
 	FileLength = File.tellg();
 	File.seekg(0);
 	File.read((char*)&FileHeaderSectionLength, sizeof(uint64_t));

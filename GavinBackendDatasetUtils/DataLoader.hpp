@@ -23,14 +23,270 @@
 #define BIN_FILE_DTYPE_INT32  (uint8_t)0
 #define BIN_FILE_DTYPE_INT24  (uint8_t)2
 
+#define UINT24_MAX (uint32_t)16777215
 
-namespace py = pybind11;
+// Thanks to https://stackoverflow.com/questions/2682725/int24-24-bit-integral-datatype
+// Used their code as base for this class as i cba to spend all my time implimenting uint24_t from scratch.
 
-struct GPU_Accelerated_Line {
-	int64_t Index;
+class uint24_t
+{
+protected:
+    unsigned char m_Internal[3];
+public:
+    uint24_t()
+    {
+    }
 
+    uint24_t(const int val)
+    {
+        *this = val;
+    }
+
+    uint24_t(const uint24_t& val)
+    {
+        *this = val;
+    }
+
+    operator int() const
+    {
+        return (m_Internal[2] << 16) | (m_Internal[1] << 8) | (m_Internal[0] << 0);
+    }
+
+    operator float() const
+    {
+        return (float)this->operator int();
+    }
+
+    uint24_t& operator =(const uint24_t& input)
+    {
+        m_Internal[0] = input.m_Internal[0];
+        m_Internal[1] = input.m_Internal[1];
+        m_Internal[2] = input.m_Internal[2];
+
+        return *this;
+    }
+
+    uint24_t& operator =(const int input)
+    {
+        m_Internal[0] = ((unsigned char*)&input)[0];
+        m_Internal[1] = ((unsigned char*)&input)[1];
+        m_Internal[2] = ((unsigned char*)&input)[2];
+
+        return *this;
+    }
+
+    /***********************************************/
+
+    uint24_t operator +(const uint24_t& val) const
+    {
+        return uint24_t((int)*this + (int)val);
+    }
+
+    uint24_t operator -(const uint24_t& val) const
+    {
+        return uint24_t((int)*this - (int)val);
+    }
+
+    uint24_t operator *(const uint24_t& val) const
+    {
+        return uint24_t((int)*this * (int)val);
+    }
+
+    uint24_t operator /(const uint24_t& val) const
+    {
+        return uint24_t((int)*this / (int)val);
+    }
+
+    /***********************************************/
+
+    uint24_t operator +(const int val) const
+    {
+        return uint24_t((int)*this + val);
+    }
+
+    uint24_t operator -(const int val) const
+    {
+        return uint24_t((int)*this - val);
+    }
+
+    uint24_t operator *(const int val) const
+    {
+        return uint24_t((int)*this * val);
+    }
+
+    uint24_t operator /(const int val) const
+    {
+        return uint24_t((int)*this / val);
+    }
+
+    /***********************************************/
+    /***********************************************/
+
+
+    uint24_t& operator +=(const uint24_t& val)
+    {
+        *this = *this + val;
+        return *this;
+    }
+
+    uint24_t& operator -=(const uint24_t& val)
+    {
+        *this = *this - val;
+        return *this;
+    }
+
+    uint24_t& operator *=(const uint24_t& val)
+    {
+        *this = *this * val;
+        return *this;
+    }
+
+    uint24_t& operator /=(const uint24_t& val)
+    {
+        *this = *this / val;
+        return *this;
+    }
+
+    /***********************************************/
+
+    uint24_t& operator +=(const int val)
+    {
+        *this = *this + val;
+        return *this;
+    }
+
+    uint24_t& operator -=(const int val)
+    {
+        *this = *this - val;
+        return *this;
+    }
+    uint24_t& operator *=(const int val)
+    {
+        *this = *this * val;
+        return *this;
+    }
+
+    uint24_t& operator /=(const int val)
+    {
+        *this = *this / val;
+        return *this;
+    }
+
+    /***********************************************/
+    /***********************************************/
+
+    uint24_t operator >>(const int val) const
+    {
+        return uint24_t((int)*this >> val);
+    }
+
+    uint24_t operator <<(const int val) const
+    {
+        return uint24_t((int)*this << val);
+    }
+
+    /***********************************************/
+
+    uint24_t& operator >>=(const int val)
+    {
+        *this = *this >> val;
+        return *this;
+    }
+
+    uint24_t& operator <<=(const int val)
+    {
+        *this = *this << val;
+        return *this;
+    }
+
+    /***********************************************/
+    /***********************************************/
+
+    operator bool() const
+    {
+        return (int)*this != 0;
+    }
+
+    bool operator !() const
+    {
+        return !((int)*this);
+    }
+
+    uint24_t operator -()
+    {
+        return uint24_t(-(int)*this);
+    }
+
+    /***********************************************/
+    /***********************************************/
+
+    bool operator ==(const uint24_t& val) const
+    {
+        return (int)*this == (int)val;
+    }
+
+    bool operator !=(const uint24_t& val) const
+    {
+        return (int)*this != (int)val;
+    }
+
+    bool operator >=(const uint24_t& val) const
+    {
+        return (int)*this >= (int)val;
+    }
+
+    bool operator <=(const uint24_t& val) const
+    {
+        return (int)*this <= (int)val;
+    }
+
+    bool operator >(const uint24_t& val) const
+    {
+        return (int)*this > (int)val;
+    }
+
+    bool operator <(const uint24_t& val) const
+    {
+        return (int)*this < (int)val;
+    }
+
+    /***********************************************/
+
+    bool operator ==(const int val) const
+    {
+        return (int)*this == val;
+    }
+
+    bool operator !=(const int val) const
+    {
+        return (int)*this != val;
+    }
+
+    bool operator >=(const int val) const
+    {
+        return (int)*this >= val;
+    }
+
+    bool operator <=(const int val) const
+    {
+        return (int)*this <= val;
+    }
+
+    bool operator >(const int val) const
+    {
+        return ((int)*this) > val;
+    }
+
+    bool operator <(const int val) const
+    {
+        return (int)*this < val;
+    }
+
+    /***********************************************/
+    /***********************************************/
 };
 
+namespace py = pybind11;
 
 // Legacy
 
