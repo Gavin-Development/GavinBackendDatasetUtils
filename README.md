@@ -20,7 +20,7 @@ samples = LTD.LoadTrainDataMT(10000000, "C:/Users/User/Desktop/Gavin/GavinTraini
 ```
 This function takes inputs in exactly the same way as LoadTrainDataST() but instead has a differing internal mechanism to be more memory efficient and utilise multiple cores to speed up loading of the dataset. It will not always return the full number of samples if it is now divisible by the number of threads avalible without a remainder. 
 
-**NOTE** This is the prefferred method of loading the dataset due to its speed, memory efficiency and overall performance.
+**NOTE** This is the preferred method of loading the dataset due to its speed, memory efficiency and overall performance.
 
 This is the ConvertDataSet() function:
 ```python
@@ -41,6 +41,10 @@ This will load 10,000,000 samples from the specified file in the specified direc
 ## Work in progress functions
 #### SaveTrainData()
 This function will save training data sets authored in python into the BIN format for later ingest by the training script.
+
+## To Do
+* Impliment a data stream class that dynamically streams in larger datasets to allow significantly lower memory usage during training of gavin. This mechanism is under investigation and not currently being implimented nor guarenteed as a feature.
+* Investigate memory usage of ST impl to posibaly optimise & restructure code to eliminate un neccesary operations.
 
 ## Known issues
 None
