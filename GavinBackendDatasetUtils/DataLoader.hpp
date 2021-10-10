@@ -26,7 +26,7 @@
 #define UINT24_MAX (uint32_t)16777215
 
 // Thanks to https://stackoverflow.com/questions/2682725/int24-24-bit-integral-datatype
-// Used their code as base for this class as i cba to spend all my time implimenting uint24_t from scratch.
+// Used their code as base for this class as i cba to spend all my time implementing uint24_t from scratch.
 
 class uint24_t
 {
