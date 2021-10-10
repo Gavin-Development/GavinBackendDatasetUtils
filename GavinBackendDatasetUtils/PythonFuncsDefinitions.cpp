@@ -8,7 +8,7 @@ int InitModule() {
 
 PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
     InitModule();
-    handle.doc() = "This module is a custom module written in c++ to accelerate dataset loading for Gavin Bot made by Josh (Scott Survivor)";
+    handle.doc() = "This module is a custom module written in c++ to accelerate dataset loading for Gavin Bot made by Josh (Scot_Survivor)";
     handle.def("LoadTrainDataST_Legacy", &LoadTrainDataST_Legacy);
     handle.def("LoadTrainDataMT", &LoadTrainDataMT);
     handle.def("LoadTrainDataST", &LoadTrainDataST);
