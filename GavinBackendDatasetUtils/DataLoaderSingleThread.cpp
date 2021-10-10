@@ -93,8 +93,8 @@ py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, s
 		}
 
 		if (metadata.dtypeint16 == BIN_FILE_DTYPE_INT16) {
-			std::cout << "Dtype uint24 Detected." << std::endl;
-			std::cout << CurrentLine << std::endl;
+			// std::cout << "Dtype uint24 Detected." << std::endl;
+			// std::cout << CurrentLine << std::endl;
 			// Resize the buffer to take in the file data.
 			SampleFromFileDataBuffer_int16.resize(metadata.SampleLength / 2);
 
