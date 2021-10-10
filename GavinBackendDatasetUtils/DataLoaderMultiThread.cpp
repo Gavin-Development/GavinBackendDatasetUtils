@@ -111,7 +111,7 @@ py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, st
 	// Multithreading setup variables.
 	std::vector<std::thread> DataLoaderThreads;
 	int* MultiThreadDataBuffer;
-	uint32_t NumberOfThreadsAvalible;
+	uint32_t NumberOfThreadsAvailable;
 	uint32_t NumberOfThreadsToUse;
 	uint64_t SamplesToReadPerThread;
 	uint64_t SamplesLaunched;
@@ -150,11 +150,11 @@ py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, st
 	std::cout << "Number Of Samples In File " << NumberOfSamplesInFile << std::endl;
 
 	// Determine optimal number of threads to use.
-	NumberOfThreadsAvalible = std::thread::hardware_concurrency() * 0.8;
-	NumberOfThreadsToUse = NumberOfThreadsAvalible;
+	NumberOfThreadsAvailable = std::thread::hardware_concurrency() * 0.8;
+	NumberOfThreadsToUse = NumberOfThreadsAvailable;
 
 	// Will try to distrobute across all threads evenly.
-	SamplesToReadPerThread = samplesToRead / NumberOfThreadsAvalible;
+	SamplesToReadPerThread = samplesToRead / NumberOfThreadsAvailable;
 	std::cout << "All Threads Will Read " << SamplesToReadPerThread << " Samples." << std::endl;
 
 	// Prepare The MultiThread data load buffer.
