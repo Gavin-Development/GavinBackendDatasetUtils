@@ -153,7 +153,7 @@ py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, st
 	NumberOfThreadsAvailable = std::thread::hardware_concurrency() * 0.8;
 	NumberOfThreadsToUse = NumberOfThreadsAvailable;
 
-	// Will try to distrobute across all threads evenly.
+	// Will try to distribute across all threads evenly.
 	SamplesToReadPerThread = samplesToRead / NumberOfThreadsAvailable;
 	std::cout << "All Threads Will Read " << SamplesToReadPerThread << " Samples." << std::endl;
 
