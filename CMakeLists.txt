@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(PYBIND11_CPP_STANDARD -std=c++17)
 set(PYBIND11_PYTHON_VERSION 3.8.3)
 
-find_package(Python 3.8.3 EXACT REQUIRED COMPONENTS Interpreter Development)
+find_package(Python 3.8 EXACT REQUIRED COMPONENTS Interpreter Development)
 
 configure_file(CMakeLists.txt.in pybind11-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
