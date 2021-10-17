@@ -73,8 +73,8 @@ jobs:
     - name: Test
       shell: bash
       run: |
-        - ls
-        - python3.8 test.py
+        ls
+        python3.8 test.py
     - name: Build
       shell: bash
       run: cmake --build . --config ${{ matrix.config.build_type }}
