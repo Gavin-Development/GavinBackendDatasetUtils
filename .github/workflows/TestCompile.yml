@@ -35,7 +35,7 @@ jobs:
             archiver: "7z a",
             generators: "Ninja"
           }
-    runs-on: ${{ matrix.os }}
+    runs-on: ${{ matrix.config.os }}
     steps:
     - uses: actions/checkout@v2
     - name: Print enviroment
