@@ -73,8 +73,8 @@ jobs:
     - name: Test
       shell: bash
       run: |
-        cd instdir && ls
-        cd instdir && python3.8 test.py
+        cd ./instdir/ && ls
+        cd ./instdir/ && python3.8 test.py
     - name: Build
       shell: bash
       run: cmake --build . --config ${{ matrix.config.build_type }}
