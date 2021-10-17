@@ -10,7 +10,6 @@ on:
       - master
 jobs:
   build:
-    runs-on: windows-2019
     strategy:
       fail-fast: false
       matrix:
@@ -36,7 +35,7 @@ jobs:
             archiver: "7z a",
             generators: "Ninja"
           }
-
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
     - name: Print enviroment
