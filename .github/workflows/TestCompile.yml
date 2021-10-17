@@ -52,9 +52,8 @@ jobs:
     - name: Install dependencies on ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
-        apt update && apt install sudo
-        sudo apt-get update
-        sudo apt-get install ninja-build cmake
+        sudo apt-get update -y
+        sudo apt-get install -y ninja-build cmake
         ninja --version
         cmake --version
         gcc --version
