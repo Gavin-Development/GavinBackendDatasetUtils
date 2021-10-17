@@ -79,5 +79,6 @@ jobs:
     - name: Test
       shell: bash
       run: |
+        ls
         cd ./instdir/ && ls
         cd ./instdir/ && python3.8 test.py
