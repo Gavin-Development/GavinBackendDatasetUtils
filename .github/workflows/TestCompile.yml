@@ -76,9 +76,3 @@ jobs:
     - name: Install Strip
       shell: bash
       run: cmake --install . --strip
-    - name: Test
-      shell: bash
-      run: |
-        ls
-        cd ./instdir/ && ls
-        cd ./instdir/ && python3.8 test.py
