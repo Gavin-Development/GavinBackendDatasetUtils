@@ -24,8 +24,7 @@ jobs:
             cxx: "cl",
             environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat",
             archiver: "7z a",
-            generators: "Visual Studio 16 2019"
-          }
+            generators: "Visual Studio 16 2019"}
             - {
               name: "Windows Latest MinGW",
               os: windows-latest,
@@ -34,8 +33,7 @@ jobs:
               cc: "gcc",
               cxx: "g++",
               archiver: "7z a",
-              generators: "Ninja"
-            }
+              generators: "Ninja"}
             - {
               name: "Ubuntu_Latest_GCC",
               os: ubuntu-latest,
@@ -44,8 +42,7 @@ jobs:
               cc: "gcc",
               cxx: "g++",
               archiver: "7z a",
-              generators: "Ninja"
-            }
+              generators: "Ninja"}
             - {
               name: "Ubuntu_GCC_9",
               os: ubuntu-latest,
@@ -54,8 +51,7 @@ jobs:
               cc: "gcc",
               cxx: "g++",
               archiver: "7z a",
-              generators: "Ninja"
-            }
+              generators: "Ninja"}
             - {
               name: "macOS Latest Clang",
               os: macos-latest,
@@ -64,8 +60,7 @@ jobs:
               cc: "clang",
               cxx: "clang++",
               archiver: "7za a",
-              generators: "Ninja"
-            }
+              generators: "Ninja"}
     steps:
     - uses: actions/checkout@v2
     - name: Print enviroment
