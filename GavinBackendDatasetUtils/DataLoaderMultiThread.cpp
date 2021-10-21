@@ -181,7 +181,7 @@ py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, st
 	EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	TimeTaken = (EndTime - StartTime) / 1000000000;
 	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
-	py::capsule capsule = py::capsule(MultiThreadDataBuffer, [](void* MultiThreadedDataBuffer) { delete reinterpret_cast<std::vector<int>*>(MultiThreadedDataBuffer); });
+	py::capsule capsule = py::capsule(MultiThreadDataBuffer, [](void* MultiThreadedDataBuffer) { delete reinterpret_cast<int*>(MultiThreadedDataBuffer); });
 	py::array_t<int> LoadedSamples(
 		{ (int64_t)SamplesToReadPerThread * (int64_t)NumberOfThreadsToUse, (int64_t)sampleLength },
 		MultiThreadDataBuffer,
