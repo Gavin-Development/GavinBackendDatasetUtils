@@ -140,7 +140,7 @@ py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, s
 	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
 
 	// Encapsulate data into a numpy array for transfer back to python.
-	py::capsule capsule = py::capsule(LoadedSamples, [](void* LoadedSamples) { delete reinterpret_cast<std::vector<int>*>(LoadedSamples); });
+	py::capsule capsule = py::capsule(LoadedSamples, [](void* LoadedSamples) { delete reinterpret_cast<int*>(LoadedSamples); });
 	py::array_t<int> SamplesReturnArray(
 		{ (int64_t)samplesToRead, (int64_t)sampleLength },
 		LoadedSamples,
