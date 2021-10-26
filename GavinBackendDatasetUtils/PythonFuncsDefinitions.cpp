@@ -12,7 +12,6 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
     handle.def("LoadTrainDataST_Legacy", &LoadTrainDataST_Legacy);
     handle.def("LoadTrainDataMT", &LoadTrainDataMT);
     handle.def("LoadTrainDataST", &LoadTrainDataST);
-    handle.def("SaveTrainDataST", &SaveTrainDataST);
 
     handle.def("ConvertDataSet_TEST", &ConvertToBinFormat);
 

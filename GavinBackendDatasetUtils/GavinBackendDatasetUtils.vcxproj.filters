@@ -30,12 +30,12 @@
     <ClCompile Include="PythonFuncsDefinitions.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="DataGenerator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DataLoader.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="base64.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

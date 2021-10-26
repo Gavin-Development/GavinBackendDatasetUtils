@@ -96,6 +96,7 @@
     <ClInclude Include="DataLoader.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DataGenerator.cpp" />
     <ClCompile Include="DataLoaderLegacySupport.cpp" />
     <ClCompile Include="DataLoaderMultiThread.cpp" />
     <ClCompile Include="DataLoaderSingleThread.cpp" />
