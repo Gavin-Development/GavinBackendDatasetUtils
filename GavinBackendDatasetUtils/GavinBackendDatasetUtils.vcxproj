@@ -93,6 +93,7 @@
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="base64.hpp" />
     <ClInclude Include="DataLoader.hpp" />
   </ItemGroup>
   <ItemGroup>
