@@ -297,8 +297,6 @@ std::vector<py::list> LoadTrainDataST_Legacy(int64_t samplesToRead, std::string 
 py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 
-void SaveTrainDataST(std::vector<std::vector<int>> Data, std::string FileName);
-
 void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::string fileToSave);
 
 
@@ -308,4 +306,16 @@ namespace BIN {
 		uint16_t alignas(uint16_t) SampleLength;
 		uint8_t alignas(uint8_t) dtypeint16;
 	};
+};
+
+class DataGenerator {
+    std::ifstream File;
+    uint64_t NumberOfSamplesInFile;
+    int* SampleBuffer;
+
+
+    DataGenerator();
+    ~DataGenerator();
+
+    void UpdateDataBuffer();
 };
