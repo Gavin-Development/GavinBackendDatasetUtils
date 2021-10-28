@@ -14,7 +14,7 @@ jobs:
       - name: Checkout the changes to code files
         run: |
           git fetch
-          git config user.name "CMake Update Bot" user.email "bot@www.spigot.com"
+          git config --local user.name "CMake Update Bot" user.email "bot@www.spigot.com"
           git checkout origin/master ./GavinBackendDatasetUtils/*.cpp ./GavinBackendDatasetUtils/*.hpp README.md .gitignore .gitattributes
       - name: Commit new changes
         run: |
