@@ -14,7 +14,7 @@ jobs:
       - name: Checkout the changes to code files
         run: |
           git fetch
-          git checkout master ./GavinBackendDatasetUtils/*.cpp ./GavinBackendDatasetUtils/*.hpp README.md .gitignore .gitattributes
+          git checkout origin/master ./GavinBackendDatasetUtils/*.cpp ./GavinBackendDatasetUtils/*.hpp README.md .gitignore .gitattributes
       - name: Commit new changes
         run: |
           git commit ./GavinBackendDatasetUtils/*.cpp ./GavinBackendDatasetUtils/*.hpp README.md .gitignore .gitattributes -m "Update files from master"
