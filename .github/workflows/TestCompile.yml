@@ -3,11 +3,10 @@ name: C/C++ CI
 on:
   push:
     branches:
-      - dev
-      - master
+      - cmake
   pull_request:
     branches:
-      - master
+      - cmake
 jobs:
   build:
     strategy:
