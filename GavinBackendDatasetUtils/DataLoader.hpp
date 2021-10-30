@@ -309,13 +309,17 @@ namespace BIN {
 };
 
 class DataGenerator {
-    std::ifstream File;
-    uint64_t NumberOfSamplesInFile;
-    int* SampleBuffer;
+public:
+    std::ifstream ToFile, FromFile;
+    uint64_t NumberOfSamplesInFile, ToFileLength, FromFileLength, BufferSize, ToFileHeaderLength, FromFileHeaderLength, CurrentSampleNumber;
+    int* ToSampleBuffer,* FromSampleBuffer;
+    int startToken, endToken, sampleLength, paddingValue;
 
 
-    DataGenerator();
-    ~DataGenerator();
+    DataGenerator(std::string dataPath, std::string tokenizertoName, std::string tokenizerfromName, uint64_t iBufferSize, int istartToken, int iendToken, int isampleLength, int ipaddingValue);
+    //~DataGenerator();
 
     void UpdateDataBuffer();
+
+    void ReadSampleFromFile(std::ifstream* File);
 };
