@@ -15,6 +15,8 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
 
     handle.def("ConvertDataSet_TEST", &ConvertToBinFormat);
 
+    py::class_<DataGenerator>(handle, "DataGenerator");
+
 #ifdef VERSION_INFO
     handle.attr("__version__") = VERSION_INFO;
 #else
