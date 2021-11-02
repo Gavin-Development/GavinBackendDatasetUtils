@@ -88,7 +88,7 @@ void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderDat
 			Buffer_int32[(HeaderData.SampleLength / 4) + 1] = endToken;
 		}
 		else {
-			File->read((char*)&Buffer_int32[1], (sampleLength - 2) * 4);
+			File->read((char*)&Buffer_int32[1], (sampleLength - 2) * sizeof(int));
 			Buffer_int32[sampleLength - 1] = endToken;
 		}
 
@@ -127,7 +127,7 @@ void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderDat
 		// If the sample is longer than the buffer.
 		else {
 			// Read the values into the 24 bit array.
-			File->read((char*)&Buffer_int24, sizeof(int) * (sampleLength - 2));
+			File->read((char*)&Buffer_int24, sizeof(uint24_t) * (sampleLength - 2));
 
 			for (int i = 0; i < sampleLength - 2; i++) {
 				Buffer_int32[i + 1] = Buffer_int24[i];
@@ -140,21 +140,50 @@ void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderDat
 			memcpy(BufferToLoadTo, Buffer_int32, sizeof(int) * sampleLength);
 			return;
 		}
+	}
 
-		if (HeaderData.dtypeint16 == BIN_FILE_DTYPE_INT16) {
-			// Read in the values from the file and convert to int32.
+	if (HeaderData.dtypeint16 == BIN_FILE_DTYPE_INT16) {
+		// Read in the values from the file and convert to int32.
 
-			// If the sample is shorter than the buffer.
-			if (HeaderData.SampleLength / 2 < sampleLength - 2) {
+		// If the sample is shorter than the buffer.
+		if (HeaderData.SampleLength / 2 < sampleLength - 2) {
 
-				// padd out the 16 bit array.
-				for (int i = 0; i < sampleLength - 2; i++) {
-					Buffer_int16[i] = paddingValue;
-				}
-
-				//read in the values to the 16 bit array.
-				File->read((char*)&Buffer_int16, HeaderData.SampleLength);
+			// padd out the 16 bit array.
+			for (int i = 0; i < sampleLength - 2; i++) {
+				Buffer_int16[i] = paddingValue;
 			}
+
+			//read in the values to the 16 bit array.
+			File->read((char*)&Buffer_int16, HeaderData.SampleLength);
+
+			//transfer the 16 bit values to 32 bit values
+			for (int i = 0; i < (HeaderData.SampleLength / 2); i++) {
+				Buffer_int32[i + 1] = Buffer_int16[i];
+			}
+
+			// Add end token to the 32 bit array.
+			Buffer_int32[(HeaderData.SampleLength / 2) + 1] = endToken;
+
+			//memcpy to the destination array.
+			memcpy(BufferToLoadTo, Buffer_int32, sizeof(int) * sampleLength);
+			return;
+		}
+
+		// If the sampple is longer than the buffer.
+		else {
+			File->read((char*)&Buffer_int16, sizeof(uint16_t) * (sampleLength-2));
+
+			// transfer to the 32 bit array.
+			for (int i = 0; i < sampleLength - 2; i++) {
+				Buffer_int32[i + 1] = Buffer_int16[i];
+			}
+
+			// Set the end token
+			Buffer_int32[sampleLength - 1] = endToken;
+
+			//memcpy to the destination array.
+			memcpy(BufferToLoadTo, Buffer_int32, sizeof(int) * sampleLength);
+			return;
 		}
 	}
 };
