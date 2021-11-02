@@ -306,12 +306,24 @@ namespace BIN {
 		uint16_t alignas(uint16_t) SampleLength;
 		uint8_t alignas(uint8_t) dtypeint16;
 	};
+
+    struct TemporaryLoadBuffers {
+        int* Buffer_int32;
+        uint24_t* Buffer_int24;
+        uint16_t* Buffer_int16;
+
+        TemporaryLoadBuffers(uint32_t SampleLength) {
+            Buffer_int32 = (int*)malloc(sizeof(int) * SampleLength);
+            Buffer_int24 = (uint24_t*)malloc(sizeof(uint24_t) * (SampleLength - 2));
+            Buffer_int16 = (uint16_t*)malloc(sizeof(uint16_t) * (SampleLength - 2));
+        }
+    };
 };
 
 class DataGenerator {
 public:
     std::ifstream ToFile, FromFile;
-    uint64_t NumberOfSamplesInFile, ToFileLength, FromFileLength, BufferSize, ToFileHeaderLength, FromFileHeaderLength, CurrentSampleNumber;
+    uint64_t NumberOfSamplesInFile, ToFileLength, FromFileLength, BufferSize, FileHeaderLength, CurrentSampleNumber;
     int* ToSampleBuffer,* FromSampleBuffer;
     int startToken, endToken, sampleLength, paddingValue;
 
@@ -321,5 +333,11 @@ public:
 
     void UpdateDataBuffer();
 
-    void ReadSampleFromFile(std::ifstream* File);
+private:
+    int* Buffer_int32;
+    uint24_t* Buffer_int24;
+    uint16_t* Buffer_int16;
+
+    void ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo);
+
 };
