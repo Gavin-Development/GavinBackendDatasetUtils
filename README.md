@@ -29,6 +29,21 @@ LTD.ConvertDataSet_TEST(10_000_000,"C:/Users/user/Desktop/Gavin/GavinTraining/To
 This function will load up the Tokenizer-3.from file, load it and transcode it to BIN format and save it to 10_MILLION.BIN, it will load the first 10 million samples.
 It has minimal optimisation as its only meant to be a temporary measure for compatibility as we transition to BIN format.
 
+### Generator
+The last commit adds in the first version of a working data generator. It isnt blazing fast (yet) but it will do the trick where system RAM is a limiting factor for loading the dataset. It has 2 array exposed to the user (ToSampleBuffer, FromSampleBuffer), it has initialisation and buffer update methods exposed aswell.
+
+```python
+Generator = LTD.DataGenerator("./", "To_Samples.BIN", "From_Samples.BIN", 100_000, 69108, 66109, 52, 0)
+```
+This will create the Generator and all its associated memory objects, open file pointers to the question samples (To_Samples.BIN) and the answer samples (From_Samples.BIN). The rest of the parameters mirror that of LoadTrainDataST().
+
+```python
+Generator.UpdateBuffer()
+```
+This will read the next *100_000* samples from each of the files and load them up into the respective buffers.
+
+**NOTE** This is the first working implimentation so it will be slow and it wont error handle for you. The generator will allocate 2 buffers that are exposed to python and re fill the *same* 2 buffers with new samples each time UpdateBuffer() is called. You will need to call UpdateBuffer() after initialisation to fill the buffers.
+
 ### Old File Format
 Currently there is good support for the OG file format (pickled by python) with functions to load it and convert it to a new .BIN format.
 
@@ -47,4 +62,5 @@ This function will save training data sets authored in python into the BIN forma
 * Investigate memory usage of ST impl to posibaly optimise & restructure code to eliminate un neccesary operations.
 
 ## Known issues
-None
+- Generator is a bit slow at loading.
+- Generator is not 100% compatible with tensorflow and the way it does things.
