@@ -307,17 +307,6 @@ namespace BIN {
 		uint8_t alignas(uint8_t) dtypeint16;
 	};
 
-    struct TemporaryLoadBuffers {
-        int* Buffer_int32;
-        uint24_t* Buffer_int24;
-        uint16_t* Buffer_int16;
-
-        TemporaryLoadBuffers(uint32_t SampleLength) {
-            Buffer_int32 = (int*)malloc(sizeof(int) * SampleLength);
-            Buffer_int24 = (uint24_t*)malloc(sizeof(uint24_t) * (SampleLength - 2));
-            Buffer_int16 = (uint16_t*)malloc(sizeof(uint16_t) * (SampleLength - 2));
-        }
-    };
 };
 
 class DataGenerator {
@@ -327,6 +316,9 @@ public:
     int* ToSampleBuffer,* FromSampleBuffer;
     int startToken, endToken, sampleLength, paddingValue;
 
+    py::capsule ToSampleBufferCapsule, FromSampleBufferCapsule;
+    py::array_t<int> ToSampleBufferArray_t, FromSampleBufferArray_t;
+
 
     DataGenerator(std::string dataPath, std::string tokenizertoName, std::string tokenizerfromName, uint64_t iBufferSize, int istartToken, int iendToken, int isampleLength, int ipaddingValue);
     //~DataGenerator();
@@ -334,6 +326,7 @@ public:
     void UpdateDataBuffer();
 
 private:
+
     int* Buffer_int32;
     uint24_t* Buffer_int24;
     uint16_t* Buffer_int16;

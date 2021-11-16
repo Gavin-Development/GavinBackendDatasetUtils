@@ -55,22 +55,52 @@ DataGenerator::DataGenerator(std::string dataPath, std::string tokenizertoName, 
 	Buffer_int16 = (uint16_t*)malloc(sizeof(uint16_t) * (sampleLength - 2));
 
 	Buffer_int32[0] = startToken;
+
+	// configure and setup the capsules and array_t objects for python to access.
+
+	ToSampleBufferCapsule = py::capsule(ToSampleBuffer, [](void* ToSampleBuffer) { delete reinterpret_cast<int*>(ToSampleBuffer); });
+	FromSampleBufferCapsule = py::capsule(FromSampleBuffer, [](void* FromSampleBuffer) { delete reinterpret_cast<int*>(FromSampleBuffer); });
+
+	ToSampleBufferArray_t = py::array_t<int>({ (uint64_t)BufferSize, (uint64_t)sampleLength }, ToSampleBuffer, ToSampleBufferCapsule);
+	FromSampleBufferArray_t = py::array_t<int>({ (uint64_t)BufferSize, (uint64_t)sampleLength }, FromSampleBuffer, FromSampleBufferCapsule);
+
+	// Print out the settings for this generator to console to allow the programmer to check that they have configured the generator correctly.
+	std::cout << "Data generator initialised:\n ToFile: " << (dataPath + tokenizertoName) << "\n FromFile: " << (dataPath + tokenizerfromName) << "\n NumberOfSamplesInFile: " << NumberOfSamplesInFile << "\n Sample Length: " << sampleLength << "\n StartToken: " << startToken << "\n EndToken: " << endToken << "\n PaddingValue: " << paddingValue << "\n BufferSize: " << BufferSize << std::endl;
 };
 
 void DataGenerator::UpdateDataBuffer() {
-	std::cout << "Updating Data Buffer." << std::endl;
+	std::cout << "Updating Data Buffers." << std::endl;
 
-	BIN::SampleHeaderData headerData;
-	BIN::TemporaryLoadBuffers LoadBuffers(sampleLength);
-	LoadBuffers.Buffer_int32[0] = startToken;
+	BIN::SampleHeaderData ToFileHeaderData;
+	BIN::SampleHeaderData FromFileHeaderData;
 
 	for (uint32_t i = 0; i < BufferSize; i++) {
+		// check that we are not about to go out of bounds for file data.
+		if (CurrentSampleNumber > NumberOfSamplesInFile) CurrentSampleNumber = 0;
+
+		// seek to the position of the header data in the file.
+		ToFile.seekg(CurrentSampleNumber * sizeof(BIN::SampleHeaderData) + 16);
+		FromFile.seekg(CurrentSampleNumber * sizeof(BIN::SampleHeaderData) + 16);
+
+		// Read in the header Data.
+		ToFile.read((char*)&ToFileHeaderData, sizeof(BIN::SampleHeaderData));
+		FromFile.read((char*)&FromFileHeaderData, sizeof(BIN::SampleHeaderData));
+
+
+		// Load the samples into their respective buffers.
+		ReadSampleFromFile(&ToFile, ToFileHeaderData, &ToSampleBuffer[i * sampleLength]);
+		ReadSampleFromFile(&FromFile, FromFileHeaderData, &FromSampleBuffer[i * sampleLength]);
+
+		// Incriment the "CurrentSample" variable to make the loop read the next sample in line next pass.
+		CurrentSampleNumber++;
 
 	}
 
+	std::cout << "Data Buffers Updated." << std::endl;
 };
 
 void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo) {
+	int j;
 	// seek the file to the location of the sample in the file
 	File->seekg(8 + FileHeaderLength + HeaderData.OffsetFromDataSectionStart);
 
@@ -109,11 +139,11 @@ void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderDat
 			}
 
 			// Read the values into 24 bit array
-			File->read((char*)&Buffer_int24, HeaderData.SampleLength);
+			File->read((char*)Buffer_int24, HeaderData.SampleLength);
 
 			// Transfer the 24 bit values to 32bit values.
 			for (int i = 0; i < (HeaderData.SampleLength / 3); i++) {
-				Buffer_int32[i + 1] = Buffer_int24[i];
+				Buffer_int32[i + 1] = (int)Buffer_int24[i];
 			}
 
 			// Add end token to the 32bit array.
@@ -127,10 +157,10 @@ void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderDat
 		// If the sample is longer than the buffer.
 		else {
 			// Read the values into the 24 bit array.
-			File->read((char*)&Buffer_int24, sizeof(uint24_t) * (sampleLength - 2));
+			File->read((char*)Buffer_int24, sizeof(uint24_t) * (sampleLength - 2));
 
 			for (int i = 0; i < sampleLength - 2; i++) {
-				Buffer_int32[i + 1] = Buffer_int24[i];
+				Buffer_int32[i + 1] = (int)Buffer_int24[i];
 			}
 
 			// Set the end token.
@@ -154,11 +184,11 @@ void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderDat
 			}
 
 			//read in the values to the 16 bit array.
-			File->read((char*)&Buffer_int16, HeaderData.SampleLength);
+			File->read((char*)Buffer_int16, HeaderData.SampleLength);
 
 			//transfer the 16 bit values to 32 bit values
-			for (int i = 0; i < (HeaderData.SampleLength / 2); i++) {
-				Buffer_int32[i + 1] = Buffer_int16[i];
+			for (size_t i = 0; i < (HeaderData.SampleLength / 2); i++) {
+				Buffer_int32[i+1] = Buffer_int16[i];
 			}
 
 			// Add end token to the 32 bit array.
@@ -171,11 +201,11 @@ void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderDat
 
 		// If the sampple is longer than the buffer.
 		else {
-			File->read((char*)&Buffer_int16, sizeof(uint16_t) * (sampleLength-2));
+			File->read((char*)Buffer_int16, sizeof(uint16_t) * (sampleLength-2));
 
 			// transfer to the 32 bit array.
 			for (int i = 0; i < sampleLength - 2; i++) {
-				Buffer_int32[i + 1] = Buffer_int16[i];
+				Buffer_int32[i + 1] = (int)Buffer_int16[i];
 			}
 
 			// Set the end token
