@@ -321,7 +321,7 @@ public:
 
 
     DataGenerator(std::string dataPath, std::string tokenizertoName, std::string tokenizerfromName, uint64_t iBufferSize, int istartToken, int iendToken, int isampleLength, int ipaddingValue);
-    //~DataGenerator();
+    ~DataGenerator();
 
     void UpdateDataBuffer();
 
@@ -333,4 +333,20 @@ private:
 
     void ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo);
 
+};
+
+class Tokenizer {
+public:
+    std::string TokenizerName;
+    std::vector<std::string> Encodings;
+    uint64_t MaxVocabSize;
+
+    Tokenizer(std::string iTokenizerName, uint64_t iVocabSize);
+    Tokenizer(std::string iTokenizerPath);
+    
+    //void Tokenize(std::vector<std::string> Samples);
+
+    //void SaveTokenizer();
+    //void LoadTokenizer();
+private:
 };

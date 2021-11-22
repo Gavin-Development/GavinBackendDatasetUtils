@@ -102,7 +102,9 @@
     <ClCompile Include="DataLoaderMultiThread.cpp" />
     <ClCompile Include="DataLoaderSingleThread.cpp" />
     <ClCompile Include="DataSetConversions.cpp" />
+    <ClCompile Include="DatasetCreator.cpp" />
     <ClCompile Include="PythonFuncsDefinitions.cpp" />
+    <ClCompile Include="Tokenizer.cpp" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
 </Project>
