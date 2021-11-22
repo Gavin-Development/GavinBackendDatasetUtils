@@ -20,6 +20,11 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def_readonly("ToSampleBuffer", &DataGenerator::ToSampleBufferArray_t)
         .def_readonly("FromSampleBuffer", &DataGenerator::FromSampleBufferArray_t);
 
+    py::class_<Tokenizer>(handle, "Tokenizer")
+        .def(py::init<std::string, uint64_t>())
+        .def(py::init<std::string>());
+
+
 #ifdef VERSION_INFO
     handle.attr("__version__") = VERSION_INFO;
 #else
