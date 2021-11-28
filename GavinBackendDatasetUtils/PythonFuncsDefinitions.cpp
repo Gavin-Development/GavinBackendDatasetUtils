@@ -22,7 +22,11 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
 
     py::class_<Tokenizer>(handle, "Tokenizer")
         .def(py::init<std::string, uint64_t>())
-        .def(py::init<std::string>());
+        .def(py::init<std::string>())
+
+        .def_readonly("Words", &Tokenizer::Encodings)
+        .def_readonly("Occurances", &Tokenizer::Commonality)
+        .def("Tokenize", &Tokenizer::Tokenize);
 
 
 #ifdef VERSION_INFO
