@@ -339,12 +339,13 @@ class Tokenizer {
 public:
     std::string TokenizerName;
     std::vector<std::string> Encodings;
+    std::vector<int> Commonality;
     uint64_t MaxVocabSize;
 
     Tokenizer(std::string iTokenizerName, uint64_t iVocabSize);
     Tokenizer(std::string iTokenizerPath);
     
-    //void Tokenize(std::vector<std::string> Samples);
+    void Tokenize(std::vector<std::string> Samples);
 
     //void SaveTokenizer();
     //void LoadTokenizer();
