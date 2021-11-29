@@ -16,14 +16,18 @@
 #include <tuple>
 #include <vector>
 
+#include <vulkan.h>
 
 #include "base64.hpp"
+#include "VulkanStuff.hpp"
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
 #define BIN_FILE_DTYPE_INT32  (uint8_t)0
 #define BIN_FILE_DTYPE_INT24  (uint8_t)2
 
 #define UINT24_MAX (uint32_t)16777215
+
+
 
 // Thanks to https://stackoverflow.com/questions/2682725/int24-24-bit-integral-datatype
 // Used their code as base for this class as i cba to spend all my time implementing uint24_t from scratch.

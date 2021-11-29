@@ -39,12 +39,18 @@
     <ClCompile Include="Tokenizer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="VulkanInstanceCreation.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DataLoader.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="base64.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VulkanStuff.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
