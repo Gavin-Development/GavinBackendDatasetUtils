@@ -1,7 +1,10 @@
 #include "DataLoader.hpp"
 
 int InitModule() {
+    VulkanContext vulkanInstance;
     std::cout << "GavinBackendDataSetTools Loaded. Please see readme.md for usage." << std::endl;
+
+    bool VulkanAvailable = setupVulkanEnvironment(&vulkanInstance);
     return 0;
 }
 
