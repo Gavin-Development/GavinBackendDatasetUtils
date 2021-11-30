@@ -9,6 +9,12 @@ struct VulkanContext {
 	VkQueue queue = VK_NULL_HANDLE;
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 	size_t requiredVram = 0;
+
+	~VulkanContext() {
+		vkDestroyDevice(device, nullptr);
+		vkDestroyInstance(instance, nullptr);
+		
+	}
 };
 
 bool setupVulkanEnvironment(VulkanContext* pVulkanStuff);
