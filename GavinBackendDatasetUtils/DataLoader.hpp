@@ -16,7 +16,6 @@
 #include <tuple>
 #include <vector>
 
-#include <vulkan.h>
 
 #include "base64.hpp"
 #include "VulkanStuff.hpp"
