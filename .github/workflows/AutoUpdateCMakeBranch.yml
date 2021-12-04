@@ -17,6 +17,9 @@ jobs:
           git config --local user.name "CMake Update Bot"
           git config --local user.email "bot@www.spigot.com"
           git checkout origin/master ./GavinBackendDatasetUtils/*.cpp ./GavinBackendDatasetUtils/*.hpp README.md .gitignore .gitattributes
+      - name: Add new changes
+        run: |
+          git add ./GavinBackendDatasetUtils/*.cpp ./GavinBackendDatasetUtils/*.hpp
       - name: Commit new changes
         run: |
           git commit ./GavinBackendDatasetUtils/*.cpp ./GavinBackendDatasetUtils/*.hpp README.md .gitignore .gitattributes -m "Update files from master"
