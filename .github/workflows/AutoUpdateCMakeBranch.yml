@@ -13,6 +13,7 @@ jobs:
           ref: cmake
       - name: Checkout the changes to code files
         run: |
+          git checkout origin/cmake
           git fetch
           git config --local user.name "CMake Update Bot"
           git config --local user.email "bot@www.spigot.com"
