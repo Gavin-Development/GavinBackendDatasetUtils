@@ -25,4 +25,4 @@ jobs:
           git commit ./GavinBackendDatasetUtils/*.cpp ./GavinBackendDatasetUtils/*.hpp README.md .gitignore .gitattributes -m "Update files from master"
       - name: Push changes to CMake
         run: |
-          git push
+          git push origin cmake
