@@ -16,9 +16,9 @@
 #include <tuple>
 #include <vector>
 
+#include <CL/sycl.hpp>
 
 #include "base64.hpp"
-#include "VulkanStuff.hpp"
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
 #define BIN_FILE_DTYPE_INT32  (uint8_t)0
@@ -305,9 +305,9 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 
 namespace BIN {
 	struct SampleHeaderData {
-		uint64_t alignas(uint64_t) OffsetFromDataSectionStart;
-		uint16_t alignas(uint16_t) SampleLength;
-		uint8_t alignas(uint8_t) dtypeint16;
+		uint64_t OffsetFromDataSectionStart;
+		uint16_t SampleLength;
+		uint8_t dtypeint16;
 	};
 
 };
@@ -349,6 +349,7 @@ public:
     Tokenizer(std::string iTokenizerPath);
     
     void Tokenize(std::vector<std::string> Samples);
+    void Tokenize_MT(std::vector<std::string> Samples);
 
     //void SaveTokenizer();
     //void LoadTokenizer();

@@ -29,3 +29,9 @@ void Tokenizer::Tokenize(std::vector<std::string> Samples) {
 		}
 	}
 };
+
+
+void Tokenize_MT(std::vector<std::string> Samples) {
+	uint64_t NumberOfCoresToUse;
+
+};
