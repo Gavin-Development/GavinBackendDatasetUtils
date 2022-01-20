@@ -1,4 +1,7 @@
 #pragma once
+
+#include <corecrt.h>
+
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
@@ -16,9 +19,9 @@
 #include <tuple>
 #include <vector>
 
-#include <CL/sycl.hpp>
+//#include <CL/sycl.hpp>
 
-#include "base64.hpp"
+//#include "base64.hpp"
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
 #define BIN_FILE_DTYPE_INT32  (uint8_t)0
@@ -354,4 +357,5 @@ public:
     //void SaveTokenizer();
     //void LoadTokenizer();
 private:
+    int something;
 };
