@@ -59,8 +59,7 @@
       <UseMSVC>false</UseMSVC>
       <CCppSupport>Cpp17Support</CCppSupport>
       <SYCLWarningLevel>Level3</SYCLWarningLevel>
-      <AdditionalOptions>
-      </AdditionalOptions>
+      <AdditionalOptions>/DLL</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -88,8 +87,7 @@
       <UseMSVC>false</UseMSVC>
       <CCppSupport>Cpp17Support</CCppSupport>
       <SYCLWarningLevel>Level3</SYCLWarningLevel>
-      <AdditionalOptions>
-      </AdditionalOptions>
+      <AdditionalOptions>/DLL</AdditionalOptions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
