@@ -3,8 +3,6 @@ Data Loader for Gavin written in C++
 
 This tool set is a WIP suite of tools for authoring, managing & loading datasets for Gavin bot.
 
-# Current build failing due to intel compiler issues, fix is being worked on but in the mean time please switch to MSVCC compiler instead.
-
 ## Usage
 
 ### New File Format
