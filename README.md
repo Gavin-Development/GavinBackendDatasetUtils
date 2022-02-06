@@ -60,6 +60,7 @@ This function will save training data sets authored in python into the BIN forma
 ## To Do
 * Impliment a data stream class that dynamically streams in larger datasets to allow significantly lower memory usage during training of gavin. This mechanism is under investigation and not currently being implimented nor guarenteed as a feature.
 * Investigate memory usage of ST impl to posibaly optimise & restructure code to eliminate un neccesary operations.
+* Change the way how datasets are handled to allow OOP usage of dataset files from python to simplify the way the programmer handles the datasets in python. This involves abstracting the opening, loading and modification and saving of datasets.
 
 ## Known issues
 - Generator is a bit slow at loading.

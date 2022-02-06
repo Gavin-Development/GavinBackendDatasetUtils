@@ -64,6 +64,9 @@ DataGenerator::DataGenerator(std::string dataPath, std::string tokenizertoName, 
 	ToSampleBufferArray_t = py::array_t<int>({ (uint64_t)BufferSize, (uint64_t)sampleLength }, ToSampleBuffer, ToSampleBufferCapsule);
 	FromSampleBufferArray_t = py::array_t<int>({ (uint64_t)BufferSize, (uint64_t)sampleLength }, FromSampleBuffer, FromSampleBufferCapsule);
 
+	ToFileHeaderData = (BIN::SampleHeaderData*)malloc(sizeof(BIN::SampleHeaderData) * BufferSize);
+	FromFileHeaderData = (BIN::SampleHeaderData*)malloc(sizeof(BIN::SampleHeaderData) * BufferSize);
+
 	// Print out the settings for this generator to console to allow the programmer to check that they have configured the generator correctly.
 	std::cout << "Data generator initialised:\n ToFile: " << (dataPath + tokenizertoName) << "\n FromFile: " << (dataPath + tokenizerfromName) << "\n NumberOfSamplesInFile: " << NumberOfSamplesInFile << "\n Sample Length: " << sampleLength << "\n StartToken: " << startToken << "\n EndToken: " << endToken << "\n PaddingValue: " << paddingValue << "\n BufferSize: " << BufferSize << std::endl;
 };
@@ -71,25 +74,13 @@ DataGenerator::DataGenerator(std::string dataPath, std::string tokenizertoName, 
 void DataGenerator::UpdateDataBuffer() {
 	std::cout << "Updating Data Buffers." << std::endl;
 
-	BIN::SampleHeaderData ToFileHeaderData;
-	BIN::SampleHeaderData FromFileHeaderData;
+	ReadRequiredHeadersFromFile(&ToFile, ToFileHeaderData);
+	ReadRequiredHeadersFromFile(&FromFile, FromFileHeaderData);
 
 	for (uint32_t i = 0; i < BufferSize; i++) {
-		// check that we are not about to go out of bounds for file data.
-		if (CurrentSampleNumber > NumberOfSamplesInFile) CurrentSampleNumber = 0;
-
-		// seek to the position of the header data in the file.
-		ToFile.seekg(CurrentSampleNumber * sizeof(BIN::SampleHeaderData) + 16);
-		FromFile.seekg(CurrentSampleNumber * sizeof(BIN::SampleHeaderData) + 16);
-
-		// Read in the header Data.
-		ToFile.read((char*)&ToFileHeaderData, sizeof(BIN::SampleHeaderData));
-		FromFile.read((char*)&FromFileHeaderData, sizeof(BIN::SampleHeaderData));
-
-
 		// Load the samples into their respective buffers.
-		ReadSampleFromFile(&ToFile, ToFileHeaderData, &ToSampleBuffer[i * sampleLength]);
-		ReadSampleFromFile(&FromFile, FromFileHeaderData, &FromSampleBuffer[i * sampleLength]);
+		ReadSampleFromFile(&ToFile, ToFileHeaderData[i], &ToSampleBuffer[i * sampleLength]);
+		ReadSampleFromFile(&FromFile, FromFileHeaderData[i], &FromSampleBuffer[i * sampleLength]);
 
 		// Incriment the "CurrentSample" variable to make the loop read the next sample in line next pass.
 		CurrentSampleNumber++;
@@ -99,7 +90,41 @@ void DataGenerator::UpdateDataBuffer() {
 	std::cout << "Data Buffers Updated." << std::endl;
 };
 
-void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo) {
+inline void DataGenerator::ReadRequiredHeadersFromFile(std::ifstream* File, BIN::SampleHeaderData* HeaderData) {
+	uint64_t HeadersToLoad;
+
+	// check if we will go over the end of the file.
+	if (CurrentSampleNumber + BufferSize < NumberOfSamplesInFile) {
+		// Seek to the 1st sample to be loaded.
+		File->seekg(CurrentSampleNumber * sizeof(BIN::SampleHeaderData) + 16);
+
+		// read in all the samples in 1 go.
+		File->read((char*)HeaderData, sizeof(BIN::SampleHeaderData) * BufferSize);
+
+		//Set the new value for the current sample number.
+		CurrentSampleNumber = CurrentSampleNumber + BufferSize;
+	}
+	else {
+		HeadersToLoad = NumberOfSamplesInFile - CurrentSampleNumber;
+
+		// Seek to the 1st lot of samples to be loaded.
+		File->seekg(CurrentSampleNumber * sizeof(BIN::SampleHeaderData) + 16);
+
+		// read in 1st half of the samples in 1 go.
+		File->read((char*)HeaderData, sizeof(BIN::SampleHeaderData) * HeadersToLoad);
+
+		// seek to the 2nd lot of samples to be loaded (at the beginning of the header section).
+		File->seekg(16);
+
+		// read in 2nd half of the samples in 1 go.
+		File->read((char*)&HeaderData[HeadersToLoad], sizeof(BIN::SampleHeaderData) * (BufferSize - HeadersToLoad));
+
+		// Set the new value for the current sample number.
+		CurrentSampleNumber = BufferSize - HeadersToLoad;
+	}
+};
+
+inline void DataGenerator::ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo) {
 	int j;
 	// seek the file to the location of the sample in the file
 	File->seekg(8 + FileHeaderLength + HeaderData.OffsetFromDataSectionStart);
