@@ -83,8 +83,6 @@ void DataGenerator::UpdateDataBuffer() {
 		ReadSampleFromFile(&FromFile, FromFileHeaderData[i], &FromSampleBuffer[i * sampleLength]);
 
 		// Incriment the "CurrentSample" variable to make the loop read the next sample in line next pass.
-		CurrentSampleNumber++;
-
 	}
 
 	std::cout << "Data Buffers Updated." << std::endl;

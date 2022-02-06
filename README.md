@@ -63,7 +63,7 @@ This function will save training data sets authored in python into the BIN forma
 * Change the way how datasets are handled to allow OOP usage of dataset files from python to simplify the way the programmer handles the datasets in python. This involves abstracting the opening, loading and modification and saving of datasets.
 
 ## Known issues
-- Generator is a bit slow at loading.
+- --Generator is a bit slow at loading.--
 - Generator is not 100% compatible with tensorflow and the way it does things.
 
 ## Changes
