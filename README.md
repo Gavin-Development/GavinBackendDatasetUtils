@@ -65,3 +65,6 @@ This function will save training data sets authored in python into the BIN forma
 ## Known issues
 - Generator is a bit slow at loading.
 - Generator is not 100% compatible with tensorflow and the way it does things.
+
+## Changes
+* A small tweak was done to the data generator such that it now loads all the headers in 1 go rather than loading them all one at a time and then processing the sample loads, this has a small effect on memory profile of the generator but it is insignificant enough that the roughly 8x speedup is preferable.
