@@ -1,6 +1,8 @@
 #pragma once
 
+#ifdef _WIN32
 #include <corecrt.h>
+#endif
 
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
@@ -19,7 +21,7 @@
 #include <tuple>
 #include <vector>
 
-//#include <CL/sycl.hpp>
+#include <CL/sycl.hpp>
 
 //#include "base64.hpp"
 
