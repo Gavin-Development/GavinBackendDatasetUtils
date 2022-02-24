@@ -21,7 +21,7 @@
 #include <tuple>
 #include <vector>
 
-// #include <CL/sycl.hpp>
+#include <CL/sycl.hpp>
 
 //#include "base64.hpp"
 

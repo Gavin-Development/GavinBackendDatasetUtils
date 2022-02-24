@@ -32,14 +32,18 @@ add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/pybind11-src
         ${CMAKE_CURRENT_BINARY_DIR}/pybind11-build
         EXCLUDE_FROM_ALL)
 
-pybind11_add_module(${PROJECT_NAME} MODULE NO_EXTRAS GavinBackendDatasetUtils/PythonFuncsDefinitions.cpp GavinBackendDatasetUtils/DataSetConversions.cpp
-        GavinBackendDatasetUtils/DataLoaderSingleThread.cpp GavinBackendDatasetUtils/DataLoaderMultiThread.cpp
-        GavinBackendDatasetUtils/DataLoaderLegacySupport.cpp GavinBackendDatasetUtils/DataLoader.hpp GavinBackendDatasetUtils/base64.hpp)
+file(GLOB SRC_FILES GavinBackendDatasetUtils/*.cpp GavinBackendDatasetUtils/*.hpp)
+message(SRC_FILES: ${SRC_FILES})
+pybind11_add_module(${PROJECT_NAME} MODULE ${SRC_FILES})
 if(DEFINED ENV{oneAPI})
     target_link_libraries(${PROJECT_NAME} PRIVATE sycl)
     target_include_directories(${PROJECT_NAME} SYSTEM PRIVATE /opt/intel/oneapi/compiler/2022.0.2/linux/include)
 endif()
-set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".pyd")
+if(WIN32)
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".pyd")
+elseif(UNIX)
+    set_target_properties(${PROJECT_NAME} PROPERTIES SUFFIX ".so")
+endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test.py ${CMAKE_CURRENT_BINARY_DIR}/test.py COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Test.BIN ${CMAKE_CURRENT_BINARY_DIR}/Test.BIN COPYONLY)
