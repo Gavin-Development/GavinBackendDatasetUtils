@@ -8,7 +8,7 @@ This tool set is a WIP suite of tools for authoring, managing & loading datasets
 ## Usage
 
 ### New File Format
-The default dataset / file format is .BIN, it is designed to be highly compressable and efficient to load. The format is mostly complete but additions and tweaks are still being made.
+The default dataset / file format is .BIN, it is designed to be highly compressible and efficient to load. The format is mostly complete but additions and tweaks are still being made.
 
 This is the LoadTrainDataST() function:
 ```python
@@ -20,7 +20,7 @@ This is the LoadTrainDataMT() function:
 ```python
 samples = LTD.LoadTrainDataMT(10000000, "C:/Users/User/Desktop/Gavin/GavinTraining/", "Tokenizer-3.to.BIN", 69108,66109, 52, 0)
 ```
-This function takes inputs in exactly the same way as LoadTrainDataST() but instead has a differing internal mechanism to be more memory efficient and utilise multiple cores to speed up loading of the dataset. It will not always return the full number of samples if it is now divisible by the number of threads avalible without a remainder. 
+This function takes inputs in exactly the same way as LoadTrainDataST() but instead has a differing internal mechanism to be more memory efficient and utilise multiple cores to speed up loading of the dataset. It will not always return the full number of samples if it is now divisible by the number of threads available without a remainder. 
 
 **NOTE** This is the preferred method of loading the dataset due to its speed, memory efficiency and overall performance.
 
@@ -32,7 +32,7 @@ This function will load up the Tokenizer-3.from file, load it and transcode it t
 It has minimal optimisation as its only meant to be a temporary measure for compatibility as we transition to BIN format.
 
 ### Generator
-The last commit adds in the first version of a working data generator. It isnt blazing fast (yet) but it will do the trick where system RAM is a limiting factor for loading the dataset. It has 2 array exposed to the user (ToSampleBuffer, FromSampleBuffer), it has initialisation and buffer update methods exposed aswell.
+The last commit adds in the first version of a working data generator. It isn't blazing fast (yet) but it will do the trick where system RAM is a limiting factor for loading the dataset. It has 2 array exposed to the user (ToSampleBuffer, FromSampleBuffer), it has initialisation and buffer update methods exposed swell.
 
 ```python
 Generator = LTD.DataGenerator("./", "To_Samples.BIN", "From_Samples.BIN", 100_000, 69108, 66109, 52, 0)
@@ -44,10 +44,10 @@ Generator.UpdateBuffer()
 ```
 This will read the next *100_000* samples from each of the files and load them up into the respective buffers.
 
-**NOTE** This is the first working implimentation so it will be slow and it wont error handle for you. The generator will allocate 2 buffers that are exposed to python and re fill the *same* 2 buffers with new samples each time UpdateBuffer() is called. You will need to call UpdateBuffer() after initialisation to fill the buffers.
+**NOTE** This is the first working implementation, so it will be slow, and it won't error handle for you. The generator will allocate 2 buffers that are exposed to python and re fill the *same* 2 buffers with new samples each time UpdateBuffer() is called. You will need to call UpdateBuffer() after initialisation to fill the buffers.
 
 ### Old File Format
-Currently there is good support for the OG file format (pickled by python) with functions to load it and convert it to a new .BIN format.
+Currently, there is good support for the OG file format (pickled by python) with functions to load it and convert it to a new .BIN format.
 
 This is the LoadTrainDataST() function:
 ```python
@@ -60,8 +60,8 @@ This will load 10,000,000 samples from the specified file in the specified direc
 This function will save training data sets authored in python into the BIN format for later ingest by the training script.
 
 ## To Do
-* Impliment a data stream class that dynamically streams in larger datasets to allow significantly lower memory usage during training of gavin. This mechanism is under investigation and not currently being implimented nor guarenteed as a feature.
-* Investigate memory usage of ST impl to posibaly optimise & restructure code to eliminate un neccesary operations.
+* Implement a data stream class that dynamically streams in larger datasets to allow significantly lower memory usage during training of gavin. This mechanism is under investigation and not currently being implemented nor guaranteed as a feature.
+* Investigate memory usage of ST impl to possibly optimise & restructure code to eliminate un necessary operations.
 
 ## Known issues
 - Generator is a bit slow at loading.
