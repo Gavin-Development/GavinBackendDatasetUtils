@@ -55,6 +55,39 @@ samples = LTD.LoadTrainDataST_Legacy(10000000, "C:/Users/User/Desktop/Gavin/Gavi
 ```
 This will load 10,000,000 samples from the specified file in the specified directory. It will add start token 69108 and end token 66109 and pad each sample to length 52 with 0s.
 
+## Building
+### Linux
+#### Requirements
+
+- C++ Compiler Currently supported: G++ version 4.8 or greater.
+- Or you can use: Intel's DPC++ version 2022.0.0 or greater.
+- CMake Version 3.21.0 or greater.
+- Ninja 1.10.1 or greater.
+
+#### Building steps
+#### Standard Compiler (No DPC++)
+### Step One
+```shell
+git clone https://Gavin-Development/GavinBackendDatasetUtils
+git checkout cmake-oneAPI-Support  # Checkout this branch. TODO(Scot-Survivor): Remove this line when PR'd
+cd GavinBackendDatasetUtils
+```
+Edit the file `GavinBackendDatasetUtils/DataLoader.hpp`. Comment out line: 24. 
+To prevent the including of DPC++ libraries.
+### Step Two
+```shell
+mkdir build/
+cd build/
+cmake --build ../  # Create build files
+cmake -GNinja -DONEAPI_ROOT=<your_oneAPI_root_location> . # Build
+```
+
+### Windows
+### Requirements
+```python
+#TODO(Scot-Survivor): Add windows documentation.
+```
+
 ## Work in progress functions
 #### SaveTrainData()
 This function will save training data sets authored in python into the BIN format for later ingest by the training script.
