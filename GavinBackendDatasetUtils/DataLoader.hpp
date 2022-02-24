@@ -362,3 +362,10 @@ public:
 private:
     int something;
 };
+
+
+class Handler {
+public:
+    Handler(std::string iTokenizerName, uint8_t iAccessMode);
+private:
+};
