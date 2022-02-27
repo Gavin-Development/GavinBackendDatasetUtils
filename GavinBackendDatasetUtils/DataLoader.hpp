@@ -21,7 +21,9 @@
 #include <tuple>
 #include <vector>
 
+#if defined(ONEAPI_ROOT)
 #include <CL/sycl.hpp>
+#endif
 
 //#include "base64.hpp"
 
