@@ -31,7 +31,8 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 		std::cout << "Loading (Up To) " << samplesToRead << " Samples." << std::endl;
 	}
 	else {
-		std::cout << "Failed To Open File." << std::endl;
+		// std::cout << "Failed To Open File." << std::endl;
+        throw std::runtime_error("Failed To Open File.");
 		return;
 	}
 

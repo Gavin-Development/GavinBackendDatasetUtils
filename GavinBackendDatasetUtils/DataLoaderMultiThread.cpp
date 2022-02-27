@@ -120,10 +120,8 @@ py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, st
 	File = std::ifstream(FileName, std::ios::binary | std::ios::ate);
 	if (!File.is_open()) {
 		// alert the user file does not exist.
-		std::cout << "Please specify a valid file." << std::endl;
-
-		// return an empty array as python expects a numpy return type.
-		return py::array_t<int> {0};
+		// std::cout << "Please specify a valid file." << std::endl;
+        throw std::runtime_error("File does not exist.");
 	}
 	FileLength = File.tellg();
 	File.seekg(0);
