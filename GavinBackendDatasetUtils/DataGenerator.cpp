@@ -30,7 +30,7 @@ DataGenerator::DataGenerator(std::string dataPath, std::string tokenizertoName, 
 	FromFile.read((char*)&NumberOfSamplesInFromFile, sizeof(uint64_t));
 
 	if (NumberOfSamplesInFromFile != NumberOfSamplesInToFile) {
-		throw std::runtime_error("The files do not contain the same number of samples, symetrical loading will NOT WORK");
+		throw std::runtime_error("The files do not contain the same number of samples, symmetrical loading will NOT WORK");
 	}
 	else NumberOfSamplesInFile = NumberOfSamplesInFromFile;
 
