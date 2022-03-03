@@ -22,7 +22,7 @@ jobs:
             cxx: "cl",
             environment_script: "C:/Program Files (x86)/Microsoft Visual Studio/2019/Enterprise/VC/Auxiliary/Build/vcvars64.bat",
             archiver: "7z a",
-            generators: "Visual Studio 19 2019"
+            generators: "Ninja"
           }
           - {
             name: "Ubuntu_Latest_GCC",
