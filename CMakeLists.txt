@@ -21,7 +21,7 @@ if(DEFINED ENV{ONEAPI_ROOT})
 find_package(IntelDPCPP REQUIRED)
 endif()
 
-find_package(Python 3.8 EXACT REQUIRED COMPONENTS Interpreter Development)
+find_package(Python 3.8 REQUIRED COMPONENTS Interpreter Development)
 
 configure_file(CMakeLists.txt.in pybind11-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
