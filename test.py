@@ -1,4 +1,5 @@
 import sys
+import numpy as np
 from pathlib import Path
 
 root_path = Path(__file__).resolve()
@@ -13,3 +14,5 @@ print("Starting Single Thread: ")
 samples_one = LTD.LoadTrainDataST(800, "./", "Test.BIN", 69108, 66109, 52, 0)
 print("Starting Multi Thread: ")
 samples_two = LTD.LoadTrainDataMT(800, "./", "Test.BIN", 69108, 66109, 52, 0)
+array_d = np.array(samples_two)
+print(array_d.shape)
