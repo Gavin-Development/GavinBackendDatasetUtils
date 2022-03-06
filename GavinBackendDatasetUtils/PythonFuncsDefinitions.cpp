@@ -25,10 +25,13 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
     py::class_<Tokenizer>(handle, "Tokenizer")
         .def(py::init<std::string, uint64_t>())
         .def(py::init<std::string>())
-
-        .def_readonly("Words", &Tokenizer::Encodings)
-        .def_readonly("Occurances", &Tokenizer::Commonality)
-        .def("Tokenize", &Tokenizer::Tokenize);
+        .def("encode", &Tokenizer::encode)
+        .def("encoder_batch", &Tokenizer::encode_batch)
+        .def("decode", &Tokenizer::decode)
+        .def("decode_batch", &Tokenizer::decode_batch)
+        .def("get_vocab_size", &Tokenizer::get_vocab_size)
+        .def("get_vocab", &Tokenizer::get_vocab)
+        .def("build_vocab", &Tokenizer::build_vocab)
 
 
 #ifdef VERSION_INFO
