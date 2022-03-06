@@ -67,7 +67,7 @@ std::map<int, std::string> Tokenizer::_build_vocab_for_string(const std::vector<
         for (const auto& word: words) {
             for (int i =0; i<word.size(); i++) {
                 std::tuple<std::string, std::string> pair = std::make_tuple(word.substr(i), word.substr(i+2));
-                int count = std::count(pairs.begin(), pairs.end(), pair);
+                int count = pairs[pair]+1;
                 pairs[pair] = count;
                 if (count > best_freq) {
                     best_freq = count;
@@ -89,7 +89,8 @@ std::map<int, std::string> Tokenizer::_build_vocab_for_string(const std::vector<
             else {
                 for (int i=0; i<word.size(); i++) {
                     if (word.substr(i, 2) == string_best_pair) {
-                        std::replace(word.begin(), word.end(), string_best_pair, std::to_string(uid));
+                        std::string uid_str = std::to_string(uid);
+                        word.replace(i, 2, uid_str);
                     }
                 }
             }
