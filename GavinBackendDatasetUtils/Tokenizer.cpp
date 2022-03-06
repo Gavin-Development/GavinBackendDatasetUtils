@@ -172,7 +172,7 @@ std::map<int, std::string> Tokenizer::get_vocab() {
 }
 
 
-void Tokenizer::BuildVocab(const std::list<std::string>& corpus) {
+void Tokenizer::build_vocab(const std::list<std::string>& corpus) {
     unsigned int CHUNK_SIZE = std::thread::hardware_concurrency();
     if (CHUNK_SIZE == 0) {
         CHUNK_SIZE = 1;

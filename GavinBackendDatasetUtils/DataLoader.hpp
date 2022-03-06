@@ -352,7 +352,7 @@ public:
     Tokenizer(std::string iTokenizerName, uint64_t iVocabSize);  // iVocabSize is the maximum vocab size
     Tokenizer(std::string iTokenizerPath);  // Loads tokenizer from file
 
-    void BuildVocab(const std::list<std::string>& corpus);
+    void build_vocab(const std::list<std::string>& corpus);
 
     py::array_t<int> encode(std::string text);
     std::string decode(py::array_t<int> encoded);
