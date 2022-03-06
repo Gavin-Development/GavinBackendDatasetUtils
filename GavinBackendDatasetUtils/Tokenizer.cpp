@@ -100,3 +100,28 @@ std::map<int, std::string> Tokenizer::build_vocab_for_string(std::string text) {
 
     return vocab;
 }
+
+
+std::map<int, std::string> Tokenizer::merge(std::map<int, std::string> vok1, std::map<int, std::string> vok2) {
+    std::set<int> keys_1;
+    std::set<int> keys_2;
+    for (const auto& key: vok1) {
+        keys_1.insert(key.first);
+    }
+    for (const auto& key: vok2) {
+        keys_2.insert(key.first);
+    }
+    std::set<int> keys_union;
+    std::set_union(keys_1.begin(), keys_1.end(), keys_2.begin(), keys_2.end(),
+                   std::inserter(keys_union, keys_union.begin()));
+    std::map<int, std::string> result;
+    for (const auto& key: keys_union) {
+        if (vok1.find(key) != vok1.end()) {
+            result[key] = vok1[key];
+        }
+        else {
+            result[key] = vok2[key];
+        }
+    }
+    return result;
+}

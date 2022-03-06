@@ -376,6 +376,6 @@ private:
     static std::vector<std::string> _split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences);
 
     int get_token_id(const std::string& token);
-    std::map<int, std::string> merge(std::map<int, std::string> vok1, std::map<int, std::string> vok2);
+    static std::map<int, std::string> merge(std::map<int, std::string> vok1, std::map<int, std::string> vok2);
     std::map<int, std::string> build_vocab_for_string(std::string text);
 };
