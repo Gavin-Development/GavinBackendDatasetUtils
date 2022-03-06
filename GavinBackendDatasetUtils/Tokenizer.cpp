@@ -210,6 +210,9 @@ void Tokenizer::build_vocab(const std::list<std::string>& corpus) {
         if (vocabs.size() == 1) {
             done = true;
         }
+        else if (CHUNK_SIZE == 0) {
+            done = true;
+        }
     }
     Vocab = vocabs.front();
 }
