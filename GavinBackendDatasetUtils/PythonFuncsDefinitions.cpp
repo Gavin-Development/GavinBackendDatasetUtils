@@ -31,7 +31,7 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def("decode_batch", &Tokenizer::decode_batch)
         .def("get_vocab_size", &Tokenizer::get_vocab_size)
         .def("get_vocab", &Tokenizer::get_vocab)
-        .def("build_vocab", &Tokenizer::build_vocab)
+        .def("build_vocab", &Tokenizer::build_vocab);
 
 
 #ifdef VERSION_INFO
