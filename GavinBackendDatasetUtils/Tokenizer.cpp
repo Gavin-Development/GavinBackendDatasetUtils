@@ -53,10 +53,6 @@ std::vector<std::string> Tokenizer::_split_sentences(const std::string &delimite
 }
 
 
-int Tokenizer::get_token_id(const std::string& token) {
-    return Vocab_inv[token];
-}
-
 std::map<int, std::string> Tokenizer::_build_vocab_for_string(const std::vector<std::string>& sentences,
                                                               std::string end_of_word, uint64_t max_vocab_size) {
     std::vector<std::string> words = _split_sentences(" ", sentences);
