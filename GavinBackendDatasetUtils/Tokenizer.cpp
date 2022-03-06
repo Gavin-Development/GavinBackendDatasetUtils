@@ -55,9 +55,10 @@ int Tokenizer::get_token_id(const std::string& token) {
     return Vocab_inv[token];
 }
 
-std::map<int, std::string> Tokenizer::build_vocab_for_string(const std::vector<std::string>& sentences) {
+std::map<int, std::string> Tokenizer::_build_vocab_for_string(const std::vector<std::string>& sentences,
+                                                              std::string end_of_word, uint64_t max_vocab_size) {
     std::vector<std::string> words = _split_sentences(" ", sentences);
-    std::map<int, std::string> vocab = {{0, END_OF_WORD}};
+    std::map<int, std::string> vocab = {{0, end_of_word}};
     int uid = last_key(vocab);
     while (true) {
         std::map<std::tuple<std::string, std::string>, int> pairs;
@@ -93,6 +94,9 @@ std::map<int, std::string> Tokenizer::build_vocab_for_string(const std::vector<s
                 }
             }
         }
+        if (uid >= max_vocab_size) {
+            break;
+        }
 
     }
 
@@ -125,7 +129,7 @@ std::map<int, std::string> Tokenizer::merge(std::map<int, std::string> vok1, std
 }
 
 
-std::list<std::list<std::string>> Tokenizer::chunk_data(std::list<std::string> data, int chunk_size) {
+std::list<std::list<std::string>> Tokenizer::chunk_data(const std::list<std::string> &data, int chunk_size) {
     std::list<std::list<std::string>> result;
     std::list<std::string> chunk;
     for (const auto& sentence: data) {
@@ -141,6 +145,23 @@ std::list<std::list<std::string>> Tokenizer::chunk_data(std::list<std::string> d
     return result;
 }
 
+std::vector<std::map<int, std::string>> Tokenizer::chunk_vocab(const std::list<std::map<int, std::string>> &data,
+                                                             int chunk_size) {
+    std::vector<std::map<int, std::string>> result;
+    std::map<int, std::string> chunk;
+    for (const auto& vocab: data) {
+        if (chunk.size() == chunk_size) {
+            result.push_back(chunk);
+            chunk.clear();
+        }
+        chunk.insert(vocab.begin(), vocab.end());
+    }
+    if (!chunk.empty()) {
+        result.push_back(chunk);
+    }
+    return result;
+}
+
 
 uint64_t Tokenizer::get_vocab_size() {
     return Vocab.size();
@@ -148,4 +169,48 @@ uint64_t Tokenizer::get_vocab_size() {
 
 std::map<int, std::string> Tokenizer::get_vocab() {
     return Vocab;
+}
+
+
+void Tokenizer::BuildVocab(const std::list<std::string>& corpus) {
+    unsigned int CHUNK_SIZE = std::thread::hardware_concurrency();
+    if (CHUNK_SIZE == 0) {
+        CHUNK_SIZE = 1;
+    }
+    else if (CHUNK_SIZE % 2 == 0 && CHUNK_SIZE > 1) {
+        CHUNK_SIZE--;
+    }
+    std::list<std::list<std::string>> chunks = chunk_data(corpus, (int)CHUNK_SIZE);
+    std::vector<std::future<std::map<int, std::string>>> futures;
+    futures.reserve(chunks.size());
+    for (const auto& chunk: chunks) {
+        std::future future = std::async([this, chunk]() {
+            return _build_vocab_for_string((const std::vector<std::basic_string<char>> &) chunk, END_OF_WORD, MaxVocabSize);
+        });
+        futures.push_back(std::move(future));
+    }
+    std::list<std::map<int, std::string>> vocabs;
+    for (auto& future: futures) {
+        vocabs.push_back(future.get());
+    }
+    bool done = false;
+    while (!done) {
+        futures.clear();
+        CHUNK_SIZE = ceil(CHUNK_SIZE/2);
+        std::vector<std::map<int, std::string>> vocab_chunks = chunk_vocab(vocabs, (int)CHUNK_SIZE);
+        for (int i=0; i<ceil(vocab_chunks.size()/2); i++) {
+            std::future future = std::async([this, vocab_chunks, &i]() {
+                return merge(vocab_chunks[i], vocab_chunks[i+1]);
+            });
+            futures.push_back(std::move(future));
+        }
+        vocabs.clear();
+        for (auto& future: futures) {
+            vocabs.push_back(future.get());
+        }
+        if (vocabs.size() == 1) {
+            done = true;
+        }
+    }
+    Vocab = vocabs.front();
 }
