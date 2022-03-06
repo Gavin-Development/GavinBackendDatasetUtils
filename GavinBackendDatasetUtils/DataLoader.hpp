@@ -368,12 +368,12 @@ public:
 private:
     std::string END_OF_WORD = "</w>";
     std::string TokenizerName;
-    std::map<int, std::string> Vocab;
-    std::map<std::string, int> Vocab_inv;
+    std::map<int, std::string> Vocab = {{0, END_OF_WORD}};
+    std::map<std::string, int> Vocab_inv = {{END_OF_WORD, 0}};
     uint64_t MaxVocabSize;
 
     static std::vector<std::string> _split_sentence(const std::string &delimiter, std::string sentence);
-    static std::vector<std::vector<std::string>> _split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences);
+    static std::vector<std::string> _split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences);
 
     int get_token_id(const std::string& token);
     std::map<int, std::string> merge(std::map<int, std::string> vok1, std::map<int, std::string> vok2);

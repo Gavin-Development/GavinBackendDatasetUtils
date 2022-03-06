@@ -1,5 +1,14 @@
 #include "DataLoader.hpp"
 
+
+// Helper function for getting largest key
+template <typename T>
+inline const typename T::key_type& last_key(const T& pMap)
+{
+    return pMap.rbegin()->first;
+}
+
+
 Tokenizer::Tokenizer(std::string iTokenizerName, uint64_t iVocabSize) {
 	std::cout << "Initialising a new tokenizer." << std::endl;
 	TokenizerName = iTokenizerName;
@@ -23,8 +32,7 @@ std::vector<std::string> Tokenizer::_split_sentence(const std::string &delimiter
     return values;
 }
 
-
-std::vector<std::vector<std::string>> Tokenizer::_split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences) {
+std::vector<std::string> Tokenizer::_split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences) {
     std::size_t pos = 0;
     std::string token;
     std::vector<std::vector<std::string>> values;
@@ -32,7 +40,14 @@ std::vector<std::vector<std::string>> Tokenizer::_split_sentences(const std::str
     for (const auto& sentence : sentences) {
         values.push_back(_split_sentence(delimiter, sentence));
     }
-    return values;
+    std::vector<std::string> result;
+    result.reserve(sentences.size() * values[0].size());
+    for (const auto& sentence : values) {
+        for (const auto& word : sentence) {
+            result.push_back(word);
+        }
+    }
+    return result;
 }
 
 
