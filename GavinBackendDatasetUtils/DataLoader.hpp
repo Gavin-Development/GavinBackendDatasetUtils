@@ -357,7 +357,7 @@ public:
     py::array_t<int> encode(std::string text);
     std::string decode(py::array_t<int> encoded);
 
-    py::array_t<int> encode_batch(py::array_t<std::string> texts);
+    py::array_t<int> encode_batch(std::list<std::string> texts);
     std::list<std::string> decode_batch(py::array_t<int> encoded);
 
     std::map<int, std::string> get_vocab();
