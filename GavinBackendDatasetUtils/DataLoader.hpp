@@ -362,6 +362,8 @@ public:
 
     std::map<int, std::string> get_vocab();
     uint64_t get_vocab_size();
+    std::string get_name();
+
 
 
     //void SaveTokenizer();
@@ -370,7 +372,6 @@ private:
     std::string END_OF_WORD = "</w>";
     std::string TokenizerName;
     std::map<int, std::string> Vocab = {{0, END_OF_WORD}};
-    std::map<std::string, int> Vocab_inv = {{END_OF_WORD, 0}};
     uint64_t MaxVocabSize;
 
     static std::list<std::list<std::string>> chunk_data(const std::list<std::string> &data, int chunk_size);

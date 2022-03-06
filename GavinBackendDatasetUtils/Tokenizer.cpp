@@ -217,3 +217,7 @@ void Tokenizer::build_vocab(const std::list<std::string>& corpus) {
     }
     Vocab = vocabs.front();
 }
+
+std::string Tokenizer::get_name() {
+    return TokenizerName;
+}
