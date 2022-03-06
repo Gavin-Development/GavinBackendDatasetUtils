@@ -359,7 +359,7 @@ public:
     py::array_t<int> encode_batch(py::array_t<std::string> texts);
     py::array_t<std::string> decode_batch(py::array_t<int> encoded);
 
-    std::vector<std::string> get_vocab();
+    std::map<int, std::string> get_vocab();
     uint64_t get_vocab_size();
 
 

@@ -125,3 +125,12 @@ std::map<int, std::string> Tokenizer::merge(std::map<int, std::string> vok1, std
     }
     return result;
 }
+
+
+uint64_t Tokenizer::get_vocab_size() {
+    return Vocab.size();
+}
+
+std::map<int, std::string> Tokenizer::get_vocab() {
+    return Vocab;
+}
