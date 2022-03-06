@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "DataLoader.hpp"
 
 
@@ -11,7 +13,7 @@ inline const typename T::key_type& last_key(const T& pMap)
 
 Tokenizer::Tokenizer(std::string iTokenizerName, uint64_t iVocabSize) {
 	std::cout << "Initialising a new tokenizer." << std::endl;
-	TokenizerName = iTokenizerName;
+	TokenizerName = std::move(iTokenizerName);
 	MaxVocabSize = iVocabSize;
 };
 
