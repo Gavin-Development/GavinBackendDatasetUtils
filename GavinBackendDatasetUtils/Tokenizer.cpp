@@ -55,7 +55,6 @@ int Tokenizer::get_token_id(const std::string& token) {
     return Vocab_inv[token];
 }
 
-
 std::map<int, std::string> Tokenizer::build_vocab_for_string(const std::vector<std::string>& sentences) {
     std::vector<std::string> words = _split_sentences(" ", sentences);
     std::map<int, std::string> vocab = {{0, END_OF_WORD}};
@@ -121,6 +120,23 @@ std::map<int, std::string> Tokenizer::merge(std::map<int, std::string> vok1, std
         else {
             result[key] = vok2[key];
         }
+    }
+    return result;
+}
+
+
+std::list<std::list<std::string>> Tokenizer::chunk_data(std::list<std::string> data, int chunk_size) {
+    std::list<std::list<std::string>> result;
+    std::list<std::string> chunk;
+    for (const auto& sentence: data) {
+        if (chunk.size() == chunk_size) {
+            result.push_back(chunk);
+            chunk.clear();
+        }
+        chunk.push_back(sentence);
+    }
+    if (!chunk.empty()) {
+        result.push_back(chunk);
     }
     return result;
 }

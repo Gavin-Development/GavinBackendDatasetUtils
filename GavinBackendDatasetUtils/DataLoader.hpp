@@ -372,6 +372,7 @@ private:
     std::map<std::string, int> Vocab_inv = {{END_OF_WORD, 0}};
     uint64_t MaxVocabSize;
 
+    static std::list<std::list<std::string>> chunk_data(std::list<std::string> data, int chunk_size);
     static std::vector<std::string> _split_sentence(const std::string &delimiter, std::string sentence);
     static std::vector<std::string> _split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences);
 
