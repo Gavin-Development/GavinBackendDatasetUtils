@@ -10,28 +10,33 @@ Tokenizer::Tokenizer(std::string iTokenizerPath) {
 	std::cout << "Loading existing tokenizer." << std::endl;
 };
 
-void Tokenizer::Tokenize(std::vector<std::string> Samples) {
-	bool EncodingExists;
-
-	for (std::string Word : Samples) {
-		EncodingExists = false;
-		for (int i = 0; i < Encodings.size(); i++) {
-			if (Encodings[i] == Word) {
-				Commonality[i]++;
-				EncodingExists = true;
-				break;
-			}
-		}
-
-		if (EncodingExists == false && Encodings.size() < MaxVocabSize) {
-			Encodings.push_back(Word);
-			Commonality.push_back(1);
-		}
-	}
-};
+std::vector<std::string> Tokenizer::_split_sentence(const std::string &delimiter, std::string sentence) {
+    std::size_t pos = 0;
+    std::string token;
+    std::vector<std::string> values;
+    while ((pos = sentence.find(delimiter)) != std::string::npos) {
+        token = sentence.substr(0, pos);
+        values.push_back(token);
+        sentence.erase(0, pos + delimiter.length());
+    }
+    values.push_back(sentence);
+    return values;
+}
 
 
-void Tokenizer::Tokenize_MT(std::vector<std::string> Samples) {
-	uint64_t NumberOfCoresToUse;
+std::vector<std::vector<std::string>> Tokenizer::_split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences) {
+    std::size_t pos = 0;
+    std::string token;
+    std::vector<std::vector<std::string>> values;
+    values.reserve(sentences.size());
+    for (const auto& sentence : sentences) {
+        values.push_back(_split_sentence(delimiter, sentence));
+    }
+    return values;
+}
 
-};
+
+int Tokenizer::get_token_id(const std::string& token) {
+    return Vocab_inv[token];
+}
+
