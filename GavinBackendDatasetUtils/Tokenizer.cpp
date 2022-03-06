@@ -55,3 +55,48 @@ int Tokenizer::get_token_id(const std::string& token) {
     return Vocab_inv[token];
 }
 
+
+std::map<int, std::string> Tokenizer::build_vocab_for_string(std::string text) {
+    std::vector<std::string> sentences = _split_sentence("\n", std::move(text));
+    std::vector<std::string> words = _split_sentences(" ", sentences);
+    std::map<int, std::string> vocab = {{0, END_OF_WORD}};
+    int uid = last_key(vocab);
+    while (true) {
+        std::map<std::tuple<std::string, std::string>, int> pairs;
+        int best_freq = 0;
+        std::tuple<std::string, std::string> best_pair = std::make_tuple("", "");
+        for (const auto& word: words) {
+            for (int i =0; i<word.size(); i++) {
+                std::tuple<std::string, std::string> pair = std::make_tuple(word.substr(i), word.substr(i+2));
+                int count = std::count(pairs.begin(), pairs.end(), pair);
+                pairs[pair] = count;
+                if (count > best_freq) {
+                    best_freq = count;
+                    best_pair = pair;
+                }
+            }
+        }
+        if (best_pair == std::make_tuple("", "")) {
+            break;
+        }
+        uid++;
+        std::string string_best_pair = std::get<0>(best_pair) + std::get<1>(best_pair);
+        vocab[uid] = string_best_pair;
+
+        for (auto word: words) {
+            if (word == string_best_pair) {
+                word.erase(0, 2);
+            }
+            else {
+                for (int i=0; i<word.size(); i++) {
+                    if (word.substr(i, 2) == string_best_pair) {
+                        std::replace(word.begin(), word.end(), string_best_pair, std::to_string(uid));
+                    }
+                }
+            }
+        }
+
+    }
+
+    return vocab;
+}
