@@ -31,9 +31,22 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build .
         RESULT_VARIABLE result
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/pybind11-download)
 
+configure_file(CMakeLists.txt.in googletest-download/CMakeLists.txt)
+execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+        RESULT_VARIABLE result
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+execute_process(COMMAND ${CMAKE_COMMAND} --build .
+        RESULT_VARIABLE result
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
+
 # Add pybind11 directly
 add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/pybind11-src
         ${CMAKE_CURRENT_BINARY_DIR}/pybind11-build
+        EXCLUDE_FROM_ALL)
+
+# Add googletest directly
+add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/googletest-src
+        ${CMAKE_CURRENT_BINARY_DIR}/googletest-build
         EXCLUDE_FROM_ALL)
 
 file(GLOB SRC_FILES GavinBackendDatasetUtils/*.cpp GavinBackendDatasetUtils/*.hpp)
@@ -55,3 +68,14 @@ endif()
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test.py ${CMAKE_CURRENT_BINARY_DIR}/test.py COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/Test.BIN ${CMAKE_CURRENT_BINARY_DIR}/Test.BIN COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/test-lines.txt ${CMAKE_CURRENT_BINARY_DIR}/test-lines.txt COPYONLY)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/small.to ${CMAKE_CURRENT_BINARY_DIR}/small.to COPYONLY)
+
+enable_testing()
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/googletest-src/googletest/include/)
+include_directories(${CMAKE_CURRENT_BINARY_DIR}/googletest-src/googlemock/include/)
+include_directories(${Python_INCLUDE_DIRS})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/GavinBackendDatasetUtils/)
+
+add_executable(test_${PROJECT_NAME} test/unittests.cpp ${SRC_FILES})
+target_link_libraries(test_${PROJECT_NAME} pybind11::embed ${PYTHON_LIBRARIES} gtest gtest_main)
