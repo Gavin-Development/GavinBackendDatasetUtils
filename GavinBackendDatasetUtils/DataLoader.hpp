@@ -374,7 +374,7 @@ private:
     uint64_t MaxVocabSize;
 
     static std::list<std::list<std::string>> chunk_data(const std::list<std::string> &data, int chunk_size);
-    static std::list<std::map<int, std::string>> chunk_vocab(const std::list<std::map<int, std::string>> &data, int chunk_size);
+    static std::vector<std::map<int, std::string>> chunk_vocab(const std::list<std::map<int, std::string>> &data, int chunk_size);
     static std::vector<std::string> _split_sentence(const std::string &delimiter, std::string sentence);
     static std::vector<std::string> _split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences);
 
