@@ -176,7 +176,7 @@ void Tokenizer::build_vocab(const std::list<std::string>& corpus) {
     if (CHUNK_SIZE == 0) {
         CHUNK_SIZE = 1;
     }
-    else if (CHUNK_SIZE % 2 == 0 && CHUNK_SIZE > 1) {
+    else if (CHUNK_SIZE % 2 != 0 && CHUNK_SIZE > 1) {
         CHUNK_SIZE--;
     }
     std::list<std::list<std::string>> chunks = chunk_data(corpus, (int)CHUNK_SIZE);
