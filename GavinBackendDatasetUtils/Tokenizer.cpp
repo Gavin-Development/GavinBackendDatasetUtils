@@ -56,8 +56,7 @@ int Tokenizer::get_token_id(const std::string& token) {
 }
 
 
-std::map<int, std::string> Tokenizer::build_vocab_for_string(std::string text) {
-    std::vector<std::string> sentences = _split_sentence("\n", std::move(text));
+std::map<int, std::string> Tokenizer::build_vocab_for_string(const std::vector<std::string>& sentences) {
     std::vector<std::string> words = _split_sentences(" ", sentences);
     std::map<int, std::string> vocab = {{0, END_OF_WORD}};
     int uid = last_key(vocab);
