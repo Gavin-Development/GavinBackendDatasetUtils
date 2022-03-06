@@ -13,6 +13,7 @@
 #include <sstream>
 #include <fstream>
 #include <thread>
+#include <future>
 #include <stdio.h>
 #include <cstdlib>
 #include <stdexcept>
