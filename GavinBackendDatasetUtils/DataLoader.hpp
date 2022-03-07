@@ -349,7 +349,7 @@ private:
 class Tokenizer {
 public:
 
-    Tokenizer(std::string iTokenizerName, uint64_t iVocabSize);  // iVocabSize is the maximum vocab size
+    Tokenizer(std::string iTokenizerName, int iVocabSize);  // iVocabSize is the maximum vocab size
     Tokenizer(std::string iTokenizerPath);  // Loads tokenizer from file
 
     void build_vocab(const std::list<std::string>& corpus);
@@ -372,10 +372,9 @@ private:
     std::string END_OF_WORD = "</w>";
     std::string TokenizerName;
     std::map<int, std::string> Vocab = {{0, END_OF_WORD}};
-    uint64_t MaxVocabSize;
+    int MaxVocabSize;
 
-    static std::list<std::list<std::string>> chunk_data(const std::list<std::string> &data, int chunk_size);
-    static std::vector<std::map<int, std::string>> chunk_vocab(const std::list<std::map<int, std::string>> &data, int chunk_size);
+    static std::vector<std::list<std::string>> chunk_data(std::list<std::string> data, int number_of_chunks);
     static std::vector<std::string> _split_sentence(const std::string &delimiter, std::string sentence);
     static std::vector<std::string> _split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences);
 
