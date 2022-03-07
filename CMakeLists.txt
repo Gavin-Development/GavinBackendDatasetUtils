@@ -21,7 +21,7 @@ if(DEFINED ENV{ONEAPI_ROOT})
 find_package(IntelDPCPP REQUIRED)
 endif()
 
-find_package(Python 3.8 EXACT REQUIRED COMPONENTS Interpreter Development)
+find_package(Python 3.8 EXACT REQUIRED COMPONENTS Interpreter Development NumPy)
 
 configure_file(CMakeLists.txt.in pybind11-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -74,8 +74,14 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/small.to ${CMAKE_CURRENT_BINARY_DIR}/
 enable_testing()
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/googletest-src/googletest/include/)
 include_directories(${CMAKE_CURRENT_BINARY_DIR}/googletest-src/googlemock/include/)
-include_directories(${Python_INCLUDE_DIRS})
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/GavinBackendDatasetUtils/)
+include_directories(${Python_INCLUDE_DIRS})
 
 add_executable(test_${PROJECT_NAME} test/unittests.cpp ${SRC_FILES})
-target_link_libraries(test_${PROJECT_NAME} pybind11::embed ${PYTHON_LIBRARIES} gtest gtest_main)
+target_link_libraries(test_${PROJECT_NAME}
+        ${EXTRA_LIBS}
+        ${PYTHON_LIBRARIES}
+        pybind11::embed
+        ${CMAKE_DL_LIBS}
+        gtest
+        gtest_main)

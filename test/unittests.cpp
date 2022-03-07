@@ -16,18 +16,17 @@ std::list<std::string> load_text(std::string filename) {
 class TokenizerTest : public ::testing::Test {
 protected:
     virtual void SetUp() {
-        texts = load_text("test/unittests.cpp");
+        texts = load_text("test-lines.txt");
         TestTokenizer.build_vocab(texts);
     }
 
     virtual void TearDown() {
         texts.clear();
-        delete &TestTokenizer, &EmptyTokenizer;
     }
 
     std::list<std::string> texts;
     std::string name = "Test";
-    uint64_t vocab_size = 1000;
+    int vocab_size = 500;
     Tokenizer EmptyTokenizer = Tokenizer(name, vocab_size);
     Tokenizer TestTokenizer = Tokenizer(name+"-filled", vocab_size);
     // TODO: setup encode/decode
@@ -36,12 +35,11 @@ protected:
 
 TEST_F(TokenizerTest, intialised_correctly) {
     EXPECT_EQ(EmptyTokenizer.get_name(), name);
-    EXPECT_EQ(EmptyTokenizer.get_vocab_size(), vocab_size);
+    EXPECT_EQ(EmptyTokenizer.get_vocab_size(), 1);
     EXPECT_EQ(TestTokenizer.get_name(), name+"-filled");
 }
 
 TEST_F(TokenizerTest, test_build_vocab) {
-    EXPECT_EQ(TestTokenizer.get_vocab_size(), vocab_size);
     unsigned int vocab_length = TestTokenizer.get_vocab().size();
     int error = ceil((double)vocab_length*0.1); // 10% error
     EXPECT_NEAR(vocab_length, vocab_size, error);
@@ -115,6 +113,8 @@ TEST(DataLoaders, legacy_loading) {
 
 
 int main(int argc, char **argv) {
+    py::scoped_interpreter guard{};
+    Py_Initialize();
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }
