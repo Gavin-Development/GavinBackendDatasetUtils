@@ -49,6 +49,8 @@ jobs:
         ninja --version
         cmake --version
         python --version
+        python -m pip install --upgrade pip
+        python -m pip install numpy
     - name: Install dependencies on ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
@@ -58,6 +60,9 @@ jobs:
         cmake --version
         gcc --version
         python --version
+        python3.9 --version
+        python3.9 -m pip install numpy
+        sudo apt-get install python3-numpy
     - name: Configure
       shell: bash
       run: |
