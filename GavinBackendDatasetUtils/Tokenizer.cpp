@@ -10,6 +10,19 @@ inline const typename T::key_type& last_key(const T& pMap)
     return pMap.rbegin()->first;
 }
 
+// Helper function for getting a key associated with value
+template <typename T>
+inline const typename T::key_type& key_of_value(const T& pMap, const typename T::mapped_type& pValue)
+{
+    for (const auto& pPair : pMap)
+    {
+        if (pPair.second == pValue)
+        {
+            return pPair.first;
+        }
+    }
+}
+
 
 Tokenizer::Tokenizer(std::string iTokenizerName, int iVocabSize) {
 	std::cout << "Initialising a new tokenizer." << std::endl;
@@ -20,6 +33,17 @@ Tokenizer::Tokenizer(std::string iTokenizerName, int iVocabSize) {
 Tokenizer::Tokenizer(std::string iTokenizerPath) {
 	std::cout << "Loading existing tokenizer." << std::endl;
 };
+
+
+std::vector<unsigned long long int> Tokenizer::_to_bytes(std::string text) {
+    unsigned long long int offset = Vocab.size();
+    std::vector<int> out;
+    for (char const& c: text) {
+        out.push_back(c+offset);
+    }
+    return out;
+}
+
 
 std::vector<std::string> Tokenizer::_split_sentence_and_append_eow(const std::string &delimiter, std::string sentence,
                                                                    const std::string &eow) {
@@ -110,6 +134,29 @@ std::map<int, std::string> Tokenizer::_build_vocab_for_string(std::vector<std::s
     }
 
     return vocab;
+}
+
+
+py::array_t<int> Tokenizer::encode(std::string text) {
+    std::size_t pos = 0;
+    std::vector<std::string> words = _split_sentence_and_append_eow(" ", std::move(text),
+                                                                        END_OF_WORD);
+    std::list<int> encoded_string;
+    std::vector<std::string> encoded_bytes;
+    // First pass, handle all in-vocabulary byte pairs.
+    for (const auto& pair: Vocab) {
+        const auto& byte_pair = pair.second;
+        const auto& token = pair.first;
+        std::string token_str = std::to_string(token);
+        for (auto& word: words) {
+            while ((pos = word.find(byte_pair)) != std::string::npos || pos <= word.length() - 1) {
+                encoded_string.push_back(pair.first);
+                word.replace(pos, byte_pair.length(), token_str);
+                encoded_bytes.push_back(byte_pair);
+            }
+        }
+    }
+    // Second pass, handle out-of-vocabulary byte pairs.
 }
 
 

@@ -374,6 +374,8 @@ private:
     std::map<int, std::string> Vocab = {{0, END_OF_WORD}};
     int MaxVocabSize;
 
+    std::vector<unsigned long long int> _to_bytes(std::string text);
+
     static std::vector<std::vector<std::string>> chunk_data(std::vector<std::string> data, int number_of_chunks);
     static std::vector<std::string> _split_sentence_and_append_eow(const std::string &delimiter, std::string sentence,
                                                                    const std::string &eow);
