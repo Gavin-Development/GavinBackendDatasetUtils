@@ -37,7 +37,7 @@ Tokenizer::Tokenizer(std::string iTokenizerPath) {
 
 std::vector<unsigned long long int> Tokenizer::_to_bytes(std::string text) {
     unsigned long long int offset = Vocab.size();
-    std::vector<int> out;
+    std::vector<unsigned long long int> out;
     for (char const& c: text) {
         out.push_back(c+offset);
     }
