@@ -51,6 +51,7 @@ jobs:
         python --version
         python -m pip install --upgrade pip
         python -m pip install numpy
+        choco install numpy
     - name: Install dependencies on ubuntu
       if: startsWith(matrix.config.name, 'Ubuntu_Latest_GCC')
       run: |
