@@ -352,7 +352,7 @@ public:
     Tokenizer(std::string iTokenizerName, int iVocabSize);  // iVocabSize is the maximum vocab size
     Tokenizer(std::string iTokenizerPath);  // Loads tokenizer from file
 
-    void build_vocab(const std::list<std::string>& corpus);
+    void build_vocab(std::vector<std::string> corpus);
 
     py::array_t<int> encode(std::string text);
     std::string decode(py::array_t<int> encoded);
@@ -374,11 +374,13 @@ private:
     std::map<int, std::string> Vocab = {{0, END_OF_WORD}};
     int MaxVocabSize;
 
-    static std::vector<std::list<std::string>> chunk_data(std::list<std::string> data, int number_of_chunks);
-    static std::vector<std::string> _split_sentence(const std::string &delimiter, std::string sentence);
-    static std::vector<std::string> _split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences);
+    static std::vector<std::vector<std::string>> chunk_data(std::vector<std::string> data, int number_of_chunks);
+    static std::vector<std::string> _split_sentence_and_append_eow(const std::string &delimiter, std::string sentence,
+                                                                   const std::string &eow);
+    static std::vector<std::string> _split_sentences(const std::string &delimiter, std::vector<std::string> sentences,
+                                                     const std::string &eow);
 
     static std::map<int, std::string> merge(std::map<int, std::string> vok1, std::map<int, std::string> vok2);
-    static std::map<int, std::string> _build_vocab_for_string(const std::vector<std::string>& sentences,
+    static std::map<int, std::string> _build_vocab_for_string(std::vector<std::string> sentences,
                                                               std::string end_of_word, uint64_t max_vocab_size);
 };

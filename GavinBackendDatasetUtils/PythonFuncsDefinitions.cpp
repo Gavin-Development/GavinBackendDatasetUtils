@@ -1,3 +1,5 @@
+#include <utility>
+
 #include "DataLoader.hpp"
 
 int InitModule() {
@@ -31,9 +33,9 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         //.def("decode_batch", &Tokenizer::decode_batch)
         .def("get_vocab_size", &Tokenizer::get_vocab_size)
         .def("get_vocab", &Tokenizer::get_vocab)
-        .def("build_vocab", [](Tokenizer &t, const std::list<std::string>& corpus) {
+        .def("build_vocab", [](Tokenizer &t, std::vector<std::string> corpus) {
             py::gil_scoped_release release;
-            t.build_vocab(corpus);
+            t.build_vocab(std::move(corpus));
         });
 
 

@@ -21,29 +21,37 @@ Tokenizer::Tokenizer(std::string iTokenizerPath) {
 	std::cout << "Loading existing tokenizer." << std::endl;
 };
 
-std::vector<std::string> Tokenizer::_split_sentence(const std::string &delimiter, std::string sentence) {
+std::vector<std::string> Tokenizer::_split_sentence_and_append_eow(const std::string &delimiter, std::string sentence,
+                                                                   const std::string &eow) {
     std::size_t pos = 0;
     std::string token;
     std::vector<std::string> values;
     while ((pos = sentence.find(delimiter)) != std::string::npos) {
         token = sentence.substr(0, pos);
-        values.push_back(token);
-        sentence.erase(0, pos + delimiter.length());
+        if (!token.empty() && pos < sentence.length() - 1) {
+            token += eow;
+            values.push_back(token);
+            sentence.erase(0, pos + delimiter.length());
+        }
+        else {
+            break;
+        }
     }
     values.push_back(sentence);
     return values;
 }
 
-std::vector<std::string> Tokenizer::_split_sentences(const std::string &delimiter, const std::vector<std::string>& sentences) {
-    std::size_t pos = 0;
+std::vector<std::string> Tokenizer::_split_sentences(const std::string &delimiter,
+                                                     std::vector<std::string> sentences,
+                                                     const std::string &eow) {
     std::string token;
     std::vector<std::vector<std::string>> values;
-    values.reserve(sentences.size());
-    for (const auto& sentence : sentences) {
-        values.push_back(_split_sentence(delimiter, sentence));
+    for (auto sentence : sentences) {
+        if (!sentence.empty() && sentence.length() > 0 && sentence != " ") {
+            values.push_back(_split_sentence_and_append_eow(delimiter, sentence, eow));
+        }
     }
     std::vector<std::string> result;
-    result.reserve(sentences.size() * values[0].size());
     for (const auto& sentence : values) {
         for (const auto& word : sentence) {
             result.push_back(word);
@@ -53,9 +61,9 @@ std::vector<std::string> Tokenizer::_split_sentences(const std::string &delimite
 }
 
 
-std::map<int, std::string> Tokenizer::_build_vocab_for_string(const std::vector<std::string>& sentences,
+std::map<int, std::string> Tokenizer::_build_vocab_for_string(std::vector<std::string> sentences,
                                                               std::string end_of_word, uint64_t max_vocab_size) {
-    std::vector<std::string> words = _split_sentences(" ", sentences);
+    std::vector<std::string> words = _split_sentences(" ", std::move(sentences), end_of_word);
     std::map<int, std::string> vocab = {{0, end_of_word}};
     int uid = last_key(vocab);
     while (true) {
@@ -63,13 +71,15 @@ std::map<int, std::string> Tokenizer::_build_vocab_for_string(const std::vector<
         int best_freq = 0;
         std::tuple<std::string, std::string> best_pair = std::make_tuple("", "");
         for (const auto& word: words) {
-            for (int i =0; i<word.size(); i++) {
-                std::tuple<std::string, std::string> pair = std::make_tuple(word.substr(i), word.substr(i+2));
-                int count = pairs[pair]+1;
-                pairs[pair] = count;
-                if (count > best_freq) {
-                    best_freq = count;
-                    best_pair = pair;
+            for (int i =0; i<word.size()-1; i++) {
+                if (!word.empty()) {
+                    std::tuple<std::string, std::string> pair = std::make_tuple(word.substr(i), word.substr(i + 1));
+                    int count = pairs[pair] + 1;
+                    pairs[pair] = count;
+                    if (count > best_freq) {
+                        best_freq = count;
+                        best_pair = pair;
+                    }
                 }
             }
         }
@@ -128,8 +138,8 @@ std::map<int, std::string> Tokenizer::merge(std::map<int, std::string> vok1, std
 }
 
 
-std::vector<std::list<std::string>> Tokenizer::chunk_data(std::list<std::string> data, int number_of_chunks) {
-    std::vector<std::list<std::string>> result;
+std::vector<std::vector<std::string>> Tokenizer::chunk_data(std::vector<std::string> data, int number_of_chunks) {
+    std::vector<std::vector<std::string>> result;
     int size = floor(data.size()/number_of_chunks);
     for (int i=0; i < number_of_chunks; i++) {
         unsigned long int start = i*size;
@@ -144,7 +154,7 @@ std::vector<std::list<std::string>> Tokenizer::chunk_data(std::list<std::string>
         std::advance(start_it, start);
         auto end_it = data.begin();
         std::advance(end_it, end);
-        std::list<std::string> chunk = std::list<std::string>(start_it, end_it);
+        std::vector<std::string> chunk = std::vector<std::string>(start_it, end_it);
         result.push_back(chunk);
     }
     return result;
@@ -160,7 +170,7 @@ std::map<int, std::string> Tokenizer::get_vocab() {
 }
 
 
-void Tokenizer::build_vocab(const std::list<std::string>& corpus) {
+void Tokenizer::build_vocab(std::vector<std::string> corpus) {
     unsigned int CHUNK_SIZE = std::thread::hardware_concurrency();
     if (CHUNK_SIZE == 0) {
         CHUNK_SIZE = 1;
@@ -168,41 +178,58 @@ void Tokenizer::build_vocab(const std::list<std::string>& corpus) {
     else if (CHUNK_SIZE % 2 != 0 && CHUNK_SIZE > 1) {
         CHUNK_SIZE--;
     }
-    std::vector<std::list<std::string>> chunks = chunk_data(corpus, (int)CHUNK_SIZE);
-    std::vector<std::future<std::map<int, std::string>>> futures;
-    for (const auto & chunk : chunks) {
-        std::future future = std::async([this, chunk]() {
+    if (CHUNK_SIZE > 1) {
+        std::vector<std::vector<std::string>> chunks = chunk_data(corpus, (int) CHUNK_SIZE);
+        std::vector<std::future<std::map<int, std::string>>> futures;
+        for (auto chunk: chunks) {
+            std::future future = std::async([this, chunk]() {
 
-            return _build_vocab_for_string((const std::vector<std::basic_string<char>> &) chunk, END_OF_WORD, MaxVocabSize);
-        });
-        futures.push_back(std::move(future));
-    }
-    std::vector<std::map<int, std::string>> vocabs;
-    for (auto& future: futures) {
-        vocabs.push_back(future.get());
-    }
-    bool done = false;
-    while (!done) {
-        futures.clear();
-        CHUNK_SIZE = ceil(CHUNK_SIZE/2);
-        for (int i=0; i<ceil(vocabs.size()/2); i++) {
-            std::future future = std::async([this, vocabs, &i]() {
-                return merge(vocabs[i], vocabs[i+1]);
+                return _build_vocab_for_string(chunk, END_OF_WORD, MaxVocabSize);
             });
             futures.push_back(std::move(future));
         }
-        vocabs.clear();
-        for (auto& future: futures) {
+        std::vector<std::map<int, std::string>> vocabs;
+        for (auto &future: futures) {
             vocabs.push_back(future.get());
         }
-        if (vocabs.size() == 1) {
-            done = true;
+        bool done = false;
+        while (!done) {
+            futures.clear();
+            CHUNK_SIZE = ceil(CHUNK_SIZE/2);
+            if (CHUNK_SIZE == 0) {
+                CHUNK_SIZE = 1;
+            }
+            else if (CHUNK_SIZE % 2 != 0 && CHUNK_SIZE > 1) {
+                CHUNK_SIZE--;
+            }
+            int process_max = ceil(vocabs.size()/2);
+            if (process_max == 0) {
+                Vocab = vocabs[0];
+                done = true;
+            } else {
+                for (int i=0; i<process_max; i++) {
+                    std::future future = std::async([vocabs, i]() {
+                        return merge(vocabs[i], vocabs[i+1]);
+                    });
+                    futures.push_back(std::move(future));
+                }
+                vocabs.clear();
+                for (auto& future: futures) {
+                    vocabs.push_back(future.get());
+                }
+                if (vocabs.size() == 1) {
+                    done = true;
+                }
+                else if (CHUNK_SIZE == 0) {
+                    done = true;
+                }
+            }
         }
-        else if (CHUNK_SIZE == 0) {
-            done = true;
-        }
+        Vocab = vocabs.front();
     }
-    Vocab = vocabs.front();
+    else {
+        Vocab = _build_vocab_for_string(corpus, END_OF_WORD, MaxVocabSize);
+    }
 }
 
 std::string Tokenizer::get_name() {

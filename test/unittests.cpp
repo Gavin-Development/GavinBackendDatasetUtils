@@ -2,8 +2,8 @@
 #include <fstream>
 #include <DataLoader.hpp>
 
-std::list<std::string> load_text(std::string filename) {
-    std::list<std::string> texts;
+std::vector<std::string> load_text(std::string filename) {
+    std::vector<std::string> texts;
     std::ifstream input(filename);
     std::string lineBuffer;
     while (std::getline(input, lineBuffer)) {
@@ -17,6 +17,10 @@ class TokenizerTest : public ::testing::Test {
 protected:
     virtual void SetUp() {
         texts = load_text("test-lines.txt");
+        if (texts.empty()) {
+            std::cout << "Error: test-lines.txt not found" << std::endl;
+            throw std::runtime_error("Error: test-lines.txt not found");
+        }
         TestTokenizer.build_vocab(texts);
     }
 
@@ -24,7 +28,7 @@ protected:
         texts.clear();
     }
 
-    std::list<std::string> texts;
+    std::vector<std::string> texts;
     std::string name = "Test";
     int vocab_size = 500;
     Tokenizer EmptyTokenizer = Tokenizer(name, vocab_size);
