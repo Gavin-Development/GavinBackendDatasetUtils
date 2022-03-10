@@ -60,8 +60,8 @@ jobs:
         cmake --version
         gcc --version
         python --version
-        python3.9 --version
-        python3.9 -m pip install numpy
+        python3.8 --version
+        python3.8 -m pip install numpy
         sudo apt-get install python3-numpy
     - name: Configure
       shell: bash
