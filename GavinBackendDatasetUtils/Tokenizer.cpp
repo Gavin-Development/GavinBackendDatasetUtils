@@ -35,7 +35,13 @@ Tokenizer::Tokenizer(std::string iTokenizerPath) {
 };
 
 
-std::vector<unsigned long long int> Tokenizer::_to_bytes(std::string text) {
+std::list<unsigned long long int> Tokenizer::_pad_incr(const std::list<unsigned long long>& encoded) {
+    std::list<unsigned long long int> out;
+    for (auto& item: encoded) {out.push_back(item+1);}
+    return out;
+}
+
+std::vector<unsigned long long int> Tokenizer::_to_bytes(const std::string& text) {
     unsigned long long int offset = Vocab.size();
     std::vector<unsigned long long int> out;
     for (char const& c: text) {
@@ -62,6 +68,7 @@ std::vector<std::string> Tokenizer::_split_sentence_and_append_eow(const std::st
         }
     }
     values.push_back(sentence);
+    values[values.size() - 1] += eow;
     return values;
 }
 
@@ -137,26 +144,49 @@ std::map<int, std::string> Tokenizer::_build_vocab_for_string(std::vector<std::s
 }
 
 
-py::array_t<int> Tokenizer::encode(std::string text) {
-    std::size_t pos = 0;
+std::list<unsigned long long int> Tokenizer::encode(std::string text) {
     std::vector<std::string> words = _split_sentence_and_append_eow(" ", std::move(text),
                                                                         END_OF_WORD);
-    std::list<int> encoded_string;
-    std::vector<std::string> encoded_bytes;
+    std::vector<std::vector<unsigned long long int>> encoded_words;
     // First pass, handle all in-vocabulary byte pairs.
-    for (const auto& pair: Vocab) {
-        const auto& byte_pair = pair.second;
-        const auto& token = pair.first;
-        std::string token_str = std::to_string(token);
-        for (auto& word: words) {
-            while ((pos = word.find(byte_pair)) != std::string::npos || pos <= word.length() - 1) {
-                encoded_string.push_back(pair.first);
-                word.replace(pos, byte_pair.length(), token_str);
-                encoded_bytes.push_back(byte_pair);
+    for (const auto& word: words) {
+        std::vector<unsigned long long int> encoded_word;
+        bool break_loop = false;
+        for (int i = 0; i < (word.size() - 1)/2; i++) {
+            std::size_t pos = 0;
+            std::string byte_pair = word.substr(i*2, 2);
+            if ((pos = byte_pair.find('<')) != std::string::npos) {
+                pos = word.find('>');
+                byte_pair += word.substr(i*2 + 2, pos - i*2 - 1);
+                break_loop = true;
+            }
+            bool oov = false;
+            for (const auto& pair: Vocab) {
+                if (pair.second == byte_pair) {
+                    encoded_word.push_back(pair.first);
+                    oov = true;
+                    break;
+                }
+            }
+            if (!oov) {
+                std::vector<unsigned long long int> byte_pair_byte = _to_bytes(byte_pair);
+                encoded_word.push_back(byte_pair_byte[0]);
+                encoded_word.push_back(byte_pair_byte[1]);
+            }
+            if (break_loop) {
+                break;
             }
         }
+        encoded_words.push_back(encoded_word);
     }
-    // Second pass, handle out-of-vocabulary byte pairs.
+    // Convert 2D vector to 1D list.
+    std::list<unsigned long long int> encoded_text;
+    for (const auto& encoded_word: encoded_words) {
+        for (const auto& byte: encoded_word) {
+            encoded_text.push_back(byte);
+        }
+    }
+    return _pad_incr(encoded_text);
 }
 
 

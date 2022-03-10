@@ -354,10 +354,10 @@ public:
 
     void build_vocab(std::vector<std::string> corpus);
 
-    py::array_t<int> encode(std::string text);
+    std::list<unsigned long long int> encode(std::string text);
     std::string decode(py::array_t<int> encoded);
 
-    py::array_t<int> encode_batch(std::list<std::string> texts);
+    std::list<std::list<unsigned long long int>> encode_batch(std::list<std::string> texts);
     std::list<std::string> decode_batch(py::array_t<int> encoded);
 
     std::map<int, std::string> get_vocab();
@@ -371,10 +371,12 @@ public:
 private:
     std::string END_OF_WORD = "</w>";
     std::string TokenizerName;
+    std::vector<std::string> reversed_tokens = {END_OF_WORD};
     std::map<int, std::string> Vocab = {{0, END_OF_WORD}};
     int MaxVocabSize;
 
-    std::vector<unsigned long long int> _to_bytes(std::string text);
+    static std::list<unsigned long long int> _pad_incr(const std::list<unsigned long long int>& encoded);
+    std::vector<unsigned long long int> _to_bytes(const std::string& text);
 
     static std::vector<std::vector<std::string>> chunk_data(std::vector<std::string> data, int number_of_chunks);
     static std::vector<std::string> _split_sentence_and_append_eow(const std::string &delimiter, std::string sentence,
