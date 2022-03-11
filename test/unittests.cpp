@@ -33,8 +33,10 @@ protected:
     int vocab_size = 500;
     Tokenizer EmptyTokenizer = Tokenizer(name, vocab_size);
     Tokenizer TestTokenizer = Tokenizer(name+"-filled", vocab_size);
-    std::list<unsigned long long int> test_encoded_text = {586, 606, 607, 617, 1, 607, 617, 1, 599, 562,
-                                                           618, 603, 617, 618, 1}; // Means: This is a test
+    std::list<unsigned long long int> test_encoded_text = {586, 606, 607, 617, 1, // This
+                                                           607, 617, 1,  // is
+                                                           599, 1,  // a
+                                                           618, 603, 617, 618, 1}; // test
 
     std::string test_decoded_text = "This is a test";
 };
@@ -57,6 +59,12 @@ TEST_F(TokenizerTest, test_build_vocab) {
 TEST_F(TokenizerTest, encoder_test) {
     std::list<unsigned long long int> encoded_text = TestTokenizer.encode("This is a test");
     EXPECT_EQ(test_encoded_text, encoded_text);
+}
+
+
+TEST_F(TokenizerTest, decoder_test) {
+    std::string decoded_text = TestTokenizer.decode(test_encoded_text);
+    EXPECT_EQ(test_decoded_text, decoded_text);
 }
 
 

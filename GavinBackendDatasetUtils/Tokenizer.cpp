@@ -58,6 +58,20 @@ std::vector<unsigned long long int> Tokenizer::_to_bytes(const std::string& text
 }
 
 
+std::string Tokenizer::_from_bytes(const std::vector<unsigned long long int>& bytes) {
+    std::string out;
+    for (auto& byte: bytes) {
+        out.push_back(byte-Vocab.size());
+    }
+    return out;
+}
+
+std::string Tokenizer::_from_bytes(const unsigned long long int& byte) {
+    std::string out;
+    out.push_back(byte-Vocab.size());
+    return out;
+}
+
 std::vector<std::string> Tokenizer::_split_sentence_and_append_eow(const std::string &delimiter, std::string sentence,
                                                                    const std::string &eow) {
     std::size_t pos = 0;
@@ -168,18 +182,25 @@ std::list<unsigned long long int> Tokenizer::encode(std::string text) {
                 byte_pair += word.substr(i*2 + 2, pos - i*2 - 1);
                 break_loop = true;
             }
-            bool oov = false;
+            bool oov = true;
             for (const auto& pair: Vocab) {
                 if (pair.second == byte_pair) {
                     encoded_word.push_back(pair.first);
-                    oov = true;
+                    oov = false;
                     break;
                 }
             }
-            if (!oov) {
-                std::vector<unsigned long long int> byte_pair_byte = _to_bytes(byte_pair);
-                encoded_word.push_back(byte_pair_byte[0]);
-                encoded_word.push_back(byte_pair_byte[1]);
+            if (oov) {
+                if (break_loop) {
+                    std::vector<unsigned long long int> byte_char = _to_bytes(byte_pair.substr(0, 1));
+                    encoded_word.push_back(byte_char[0]);
+                    encoded_word.push_back(key_of_value(Vocab, END_OF_WORD));
+                }
+                else {
+                    std::vector<unsigned long long int> byte_pair_byte = _to_bytes(byte_pair);
+                    encoded_word.push_back(byte_pair_byte[0]);
+                    encoded_word.push_back(byte_pair_byte[1]);
+                }
             }
             if (break_loop) {
                 break;
@@ -195,6 +216,28 @@ std::list<unsigned long long int> Tokenizer::encode(std::string text) {
         }
     }
     return _pad_incr(encoded_text);
+}
+
+
+std::string Tokenizer::decode(std::list<unsigned long long int> encoded_text) {
+    // Complexity of this function is O(n) where n is the size of the encoded text.
+    std::string decoded_text;
+    encoded_text = _pad_decr(encoded_text); // Decrement the tokens to get the original values.
+    for (auto token: encoded_text) {
+        if (Vocab.find(token) != Vocab.end()) {
+            decoded_text += Vocab[token];
+        }
+        else {
+            std::string byte_char = _from_bytes(token);
+            decoded_text += byte_char;
+        }
+    }
+    std::size_t pos;
+    while ((pos = decoded_text.find(END_OF_WORD)) != std::string::npos) {
+        decoded_text.replace(pos, END_OF_WORD.size(), " ");
+    }
+    decoded_text = decoded_text.substr(0, decoded_text.size() - 1);
+    return decoded_text;
 }
 
 
