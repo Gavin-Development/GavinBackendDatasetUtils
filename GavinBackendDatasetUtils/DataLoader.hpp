@@ -376,6 +376,7 @@ private:
     int MaxVocabSize;
 
     static std::list<unsigned long long int> _pad_incr(const std::list<unsigned long long int>& encoded);
+    static std::list<unsigned long long int> _pad_decr(const std::list<unsigned long long int>& encoded);
     std::vector<unsigned long long int> _to_bytes(const std::string& text);
 
     static std::vector<std::vector<std::string>> chunk_data(std::vector<std::string> data, int number_of_chunks);

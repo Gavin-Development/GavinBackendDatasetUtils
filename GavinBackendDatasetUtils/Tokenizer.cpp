@@ -41,6 +41,13 @@ std::list<unsigned long long int> Tokenizer::_pad_incr(const std::list<unsigned 
     return out;
 }
 
+std::list<unsigned long long int> Tokenizer::_pad_decr(const std::list<unsigned long long>& encoded) {
+    std::list<unsigned long long int> out;
+    for (auto& item: encoded) {out.push_back(item-1);}
+    return out;
+}
+
+
 std::vector<unsigned long long int> Tokenizer::_to_bytes(const std::string& text) {
     unsigned long long int offset = Vocab.size();
     std::vector<unsigned long long int> out;
