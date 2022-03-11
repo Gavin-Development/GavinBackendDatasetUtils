@@ -152,6 +152,7 @@ std::map<int, std::string> Tokenizer::_build_vocab_for_string(std::vector<std::s
 
 
 std::list<unsigned long long int> Tokenizer::encode(std::string text) {
+    // Complexity Of this function is O(n+m) where n is the length of the text and m is the size of the vocabulary
     std::vector<std::string> words = _split_sentence_and_append_eow(" ", std::move(text),
                                                                         END_OF_WORD);
     std::vector<std::vector<unsigned long long int>> encoded_words;
