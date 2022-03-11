@@ -35,22 +35,22 @@ Tokenizer::Tokenizer(std::string iTokenizerPath) {
 };
 
 
-std::list<unsigned long long int> Tokenizer::_pad_incr(const std::list<unsigned long long>& encoded) {
-    std::list<unsigned long long int> out;
+std::list<uint64_t> Tokenizer::_pad_incr(const std::list<uint64_t>& encoded) {
+    std::list<uint64_t> out;
     for (auto& item: encoded) {out.push_back(item+1);}
     return out;
 }
 
-std::list<unsigned long long int> Tokenizer::_pad_decr(const std::list<unsigned long long>& encoded) {
-    std::list<unsigned long long int> out;
+std::list<uint64_t> Tokenizer::_pad_decr(const std::list<uint64_t>& encoded) {
+    std::list<uint64_t> out;
     for (auto& item: encoded) {out.push_back(item-1);}
     return out;
 }
 
 
-std::vector<unsigned long long int> Tokenizer::_to_bytes(const std::string& text) {
-    unsigned long long int offset = Vocab.size();
-    std::vector<unsigned long long int> out;
+std::vector<uint64_t> Tokenizer::_to_bytes(const std::string& text) {
+    uint64_t offset = Vocab.size();
+    std::vector<uint64_t> out;
     for (char const& c: text) {
         out.push_back(c+offset);
     }
@@ -58,7 +58,7 @@ std::vector<unsigned long long int> Tokenizer::_to_bytes(const std::string& text
 }
 
 
-std::string Tokenizer::_from_bytes(const std::vector<unsigned long long int>& bytes) {
+std::string Tokenizer::_from_bytes(const std::vector<uint64_t>& bytes) {
     std::string out;
     for (auto& byte: bytes) {
         out.push_back(byte-Vocab.size());
@@ -66,7 +66,7 @@ std::string Tokenizer::_from_bytes(const std::vector<unsigned long long int>& by
     return out;
 }
 
-std::string Tokenizer::_from_bytes(const unsigned long long int& byte) {
+std::string Tokenizer::_from_bytes(const uint64_t& byte) {
     std::string out;
     out.push_back(byte-Vocab.size());
     return out;
@@ -165,14 +165,14 @@ std::map<int, std::string> Tokenizer::_build_vocab_for_string(std::vector<std::s
 }
 
 
-std::list<unsigned long long int> Tokenizer::encode(std::string text) {
+std::list<uint64_t> Tokenizer::encode(std::string text) {
     // Complexity Of this function is O(n+m) where n is the length of the text and m is the size of the vocabulary
     std::vector<std::string> words = _split_sentence_and_append_eow(" ", std::move(text),
                                                                         END_OF_WORD);
-    std::vector<std::vector<unsigned long long int>> encoded_words;
+    std::vector<std::vector<uint64_t>> encoded_words;
     // First pass, handle all in-vocabulary byte pairs.
     for (const auto& word: words) {
-        std::vector<unsigned long long int> encoded_word;
+        std::vector<uint64_t> encoded_word;
         bool break_loop = false;
         for (int i = 0; i < (word.size() - 1)/2; i++) {
             std::size_t pos = 0;
@@ -192,12 +192,12 @@ std::list<unsigned long long int> Tokenizer::encode(std::string text) {
             }
             if (oov) {
                 if (break_loop) {
-                    std::vector<unsigned long long int> byte_char = _to_bytes(byte_pair.substr(0, 1));
+                    std::vector<uint64_t> byte_char = _to_bytes(byte_pair.substr(0, 1));
                     encoded_word.push_back(byte_char[0]);
                     encoded_word.push_back(key_of_value(Vocab, END_OF_WORD));
                 }
                 else {
-                    std::vector<unsigned long long int> byte_pair_byte = _to_bytes(byte_pair);
+                    std::vector<uint64_t> byte_pair_byte = _to_bytes(byte_pair);
                     encoded_word.push_back(byte_pair_byte[0]);
                     encoded_word.push_back(byte_pair_byte[1]);
                 }
@@ -209,7 +209,7 @@ std::list<unsigned long long int> Tokenizer::encode(std::string text) {
         encoded_words.push_back(encoded_word);
     }
     // Convert 2D vector to 1D list.
-    std::list<unsigned long long int> encoded_text;
+    std::list<uint64_t> encoded_text;
     for (const auto& encoded_word: encoded_words) {
         for (const auto& byte: encoded_word) {
             encoded_text.push_back(byte);
@@ -219,7 +219,7 @@ std::list<unsigned long long int> Tokenizer::encode(std::string text) {
 }
 
 
-std::string Tokenizer::decode(std::list<unsigned long long int> encoded_text) {
+std::string Tokenizer::decode(std::list<uint64_t> encoded_text) {
     // Complexity of this function is O(n) where n is the size of the encoded text.
     std::string decoded_text;
     encoded_text = _pad_decr(encoded_text); // Decrement the tokens to get the original values.

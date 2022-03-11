@@ -354,11 +354,11 @@ public:
 
     void build_vocab(std::vector<std::string> corpus);
 
-    std::list<unsigned long long int> encode(std::string text);
-    std::string decode(std::list<unsigned long long int> encoded_text);
+    std::list<uint64_t> encode(std::string text);
+    std::string decode(std::list<uint64_t> encoded_text);
 
-    std::list<std::list<unsigned long long int>> encode_batch(std::list<std::string> texts);
-    std::list<std::string> decode_batch(py::array_t<int> encoded);
+    std::list<std::list<uint64_t>> encode_batch(std::list<std::string> texts);
+    std::list<std::string> decode_batch(std::list<std::list<uint64_t>> encoded);
 
     std::map<int, std::string> get_vocab();
     uint64_t get_vocab_size();
@@ -375,11 +375,11 @@ private:
     std::map<int, std::string> Vocab = {{0, END_OF_WORD}};
     int MaxVocabSize;
 
-    static std::list<unsigned long long int> _pad_incr(const std::list<unsigned long long int>& encoded);
-    static std::list<unsigned long long int> _pad_decr(const std::list<unsigned long long int>& encoded);
-    std::vector<unsigned long long int> _to_bytes(const std::string& text);
-    std::string _from_bytes(const std::vector<unsigned long long int>& bytes);
-    std::string _from_bytes(const unsigned long long int& bytes);
+    static std::list<uint64_t> _pad_incr(const std::list<uint64_t>& encoded);
+    static std::list<uint64_t> _pad_decr(const std::list<uint64_t>& encoded);
+    std::vector<uint64_t> _to_bytes(const std::string& text);
+    std::string _from_bytes(const std::vector<uint64_t>& bytes);
+    std::string _from_bytes(const uint64_t& bytes);
 
     static std::vector<std::vector<std::string>> chunk_data(std::vector<std::string> data, int number_of_chunks);
     static std::vector<std::string> _split_sentence_and_append_eow(const std::string &delimiter, std::string sentence,
