@@ -47,3 +47,21 @@ void TokenSequence::replace_with_uid(TokenSequence &replace_chars, int uid) {
     }
 }
 
+bool TokenSequence::operator==(const TokenSequence &other) const {
+    if (this->tokens.size() != other.tokens.size()) {
+        return false;
+    }
+    for (std::size_t i = 0; i < this->tokens.size(); ++i) {
+        if (((this->tokens[i].letter != other.tokens[i].letter) &&
+            (this->tokens[i].type != other.tokens[i].type)) ||
+            (this->tokens[i].type == TT_UID && this->tokens[i].uid != other.tokens[i].uid)) {
+                return false;
+        }
+    }
+    return true;
+}
+
+
+bool TokenSequence::operator!=(const TokenSequence &other) const {
+    return !(*this == other);
+}

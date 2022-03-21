@@ -374,6 +374,8 @@ public:
     std::size_t find(const char &c);
 
     uid_letter_token &operator[](std::size_t idx) { return tokens[idx]; };
+    bool operator==(const TokenSequence &other) const;
+    bool operator!=(const TokenSequence &other) const;
 
     const uid_letter_token &operator[](std::size_t idx) const { return tokens[idx]; };
 

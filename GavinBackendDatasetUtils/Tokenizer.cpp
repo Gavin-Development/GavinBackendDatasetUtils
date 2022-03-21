@@ -23,7 +23,6 @@ inline const typename T::key_type& key_of_value(const T& pMap, const typename T:
     }
 }
 
-
 Tokenizer::Tokenizer(std::string iTokenizerName, int iVocabSize) {
 	std::cout << "Initialising a new tokenizer." << std::endl;
 	TokenizerName = std::move(iTokenizerName);
@@ -72,6 +71,11 @@ std::string Tokenizer::_from_bytes(const uint64_t& byte) {
     return out;
 }
 
+std::string Tokenizer::_remove_object_special_chars(const std::string &text) {
+    std::regex regexp("[`]");
+    return std::regex_replace(text, regexp, "");
+}
+
 std::vector<std::string> Tokenizer::_split_sentence_and_append_eow(const std::string &delimiter, std::string sentence,
                                                                    const std::string &eow) {
     std::size_t pos = 0;
@@ -80,6 +84,7 @@ std::vector<std::string> Tokenizer::_split_sentence_and_append_eow(const std::st
     while ((pos = sentence.find(delimiter)) != std::string::npos) {
         token = sentence.substr(0, pos);
         if (!token.empty() && pos < sentence.length() - 1) {
+            token = _remove_object_special_chars(token);
             token += eow;
             values.push_back(token);
             sentence.erase(0, pos + delimiter.length());
@@ -113,52 +118,150 @@ std::vector<std::string> Tokenizer::_split_sentences(const std::string &delimite
 }
 
 
+std::vector<TokenSequence> Tokenizer::_split_sentences_token(const std::string &delimiter,
+                                                                             std::vector<std::string> sentences,
+                                                                             const std::string &eow) {
+    std::string token;
+    std::vector<TokenSequence> values;
+    for (auto sentence : sentences) {
+        if (!sentence.empty() && sentence.length() > 0 && sentence != " ") {
+            std::vector<std::string> words_from_sentence = _split_sentence_and_append_eow(delimiter, sentence, eow);
+            for (auto word : words_from_sentence) {
+                auto token_sequence_from_word = TokenSequence(word);
+                values.push_back(token_sequence_from_word);
+            }
+        }
+    }
+    return values;
+}
+
+
 std::map<int, std::string> Tokenizer::_build_vocab_for_string(std::vector<std::string> sentences,
                                                               std::string end_of_word, uint64_t max_vocab_size) {
-    std::vector<std::string> words = _split_sentences(" ", std::move(sentences), end_of_word);
+    std::vector<TokenSequence> words = _split_sentences_token(" ", std::move(sentences), end_of_word);
     std::map<int, std::string> vocab = {{0, end_of_word}};
     int uid = last_key(vocab);
     while (true) {
-        std::map<std::tuple<std::string, std::string>, int> pairs;
-        int best_freq = 0;
-        std::tuple<std::string, std::string> best_pair = std::make_tuple("", "");
-        for (const auto& word: words) {
-            for (int i =0; i<word.size()-1; i++) {
+        std::map<std::string, int> pairs;
+        for (TokenSequence word: words) {
+            for (int i = 0; i < (word.size() - 1)/2; i++) {
                 if (!word.empty()) {
-                    std::tuple<std::string, std::string> pair = std::make_tuple(word.substr(i), word.substr(i + 1));
+                    auto pair = TokenSequence(std::string() + word[i].letter + word[i+1].letter);
+                    if (pair.find('<') != pair.size()|| pair.find('>') != pair.size() || pair.find('/') != pair.size()) {
+                        std::size_t start_pos = 0;
+                        for (int j = 0; j < word.size(); j++) {
+                            if (word[j].letter == '<') {
+                                start_pos = j;
+                                break;
+                            }
+                        }
+                        std::string test_pair = std::string() + word[start_pos].letter;
+                        for (std::size_t t=start_pos+1; t < word.size(); t++) {
+                            if (word[t].letter == '>') {
+                                test_pair += word[t].letter;
+                                break;
+                            }
+                            else {
+                                test_pair += word[t].letter;
+                            }
+                        }
+                        if (test_pair == end_of_word) {
+                            pair = test_pair;
+                        }
+                    }
                     int count = pairs[pair] + 1;
                     pairs[pair] = count;
-                    if (count > best_freq) {
-                        best_freq = count;
-                        best_pair = pair;
-                    }
+                }
+                else {
+                    break;
                 }
             }
         }
-        if (best_pair == std::make_tuple("", "")) {
+        auto pr = std::max_element(pairs.begin(), pairs.end(),
+                                   [] (const std::pair<std::string, int>& p1, const std::pair<std::string, int>& p2)
+                                   {return p1.second < p2.second;});
+        std::string best_pair = pr->first;
+        if (best_pair.empty()) {
             break;
         }
         uid++;
-        std::string string_best_pair = std::get<0>(best_pair) + std::get<1>(best_pair);
-        vocab[uid] = string_best_pair;
-
+        if (best_pair != end_of_word) {
+            vocab[uid] = best_pair;
+        } else {
+            vocab[uid] = end_of_word;
+        }
+        std::vector<uid_letter_token> token_best_pair;
+        std::vector<std::vector<uid_letter_token>> new_words;
+        bool is_same_pair = true;
+        for (auto letter: best_pair) {
+            uid_letter_token token_from_letter;
+            token_from_letter.type = TT_CHAR;
+            token_from_letter.uid = -1;
+            token_from_letter.letter = letter;
+            token_best_pair.push_back(token_from_letter);
+        }
         for (auto word: words) {
-            if (word == string_best_pair) {
-                word.erase(0, 2);
+            if (word.size() == token_best_pair.size()) {
+                for (int i = 0; i < word.size(); i++) {
+                    if (((word[i].letter != token_best_pair[i].letter) ||
+                        (word[i].type != token_best_pair[i].type)) && word[i].type == TT_CHAR) {
+                        is_same_pair = false;
+                        break;
+                    }
+                }
             }
-            else {
-                for (int i=0; i<word.size(); i++) {
-                    if (word.substr(i, 2) == string_best_pair) {
-                        std::string uid_str = std::to_string(uid);
-                        word.replace(i, 2, uid_str);
+            if (!is_same_pair) {
+                word = std::vector<uid_letter_token>();
+                new_words.push_back(word);
+                continue;
+            }else {
+                std::size_t start_pos = -1;
+                for (int i = 0; i < word.size(); i++) {
+                    if (word[i].letter == token_best_pair[0].letter) {
+                        start_pos = i;
+                        break;
+                    }
+                }
+                if (start_pos != -1) {
+                    // build string from
+                    std::string test_word = std::string();
+                    for (auto & i : word) {
+                        if (i.type == TT_CHAR) {
+                            test_word += i.letter;
+                        }
+                        else {
+                            test_word += std::to_string(i.uid);
+                        }
+                    }
+                    if (test_word == best_pair) {
+                        new_words.push_back(word);
+                    }
+                    else {
+                        std::size_t first_letter_pos = -1;
+                        std::size_t last_letter_pos = -1;
+                        std::vector<uid_letter_token> new_word = word;
+                        while (((first_letter_pos = test_word.find(token_best_pair[0].letter)) != std::string::npos)
+                                && ((last_letter_pos = test_word.find(token_best_pair[token_best_pair.size()-1].letter)) != std::string::npos)) {
+                            if (first_letter_pos != last_letter_pos && first_letter_pos >= 0
+                                && last_letter_pos >= 0) {
+                                auto length = (last_letter_pos - first_letter_pos)+1;
+                                auto token = uid_letter_token{.type=TT_UID};
+                                token.uid = uid;
+                                for (std::size_t i = 0; i < length; i++) {
+                                    new_word.erase(new_word.begin() + (int)first_letter_pos);
+                                }
+                                new_word.insert(new_word.begin() + (int)first_letter_pos, token);
+                                new_words.push_back(new_word);
+                            }
+                        }
                     }
                 }
             }
         }
+
         if (uid >= max_vocab_size) {
             break;
         }
-
     }
 
     return vocab;
@@ -299,7 +402,8 @@ std::map<int, std::string> Tokenizer::get_vocab() {
 
 
 void Tokenizer::build_vocab(std::vector<std::string> corpus) {
-    unsigned int CHUNK_SIZE = std::thread::hardware_concurrency();
+    // unsigned int CHUNK_SIZE = std::thread::hardware_concurrency();
+    unsigned int CHUNK_SIZE = 1; // For testing
     if (CHUNK_SIZE == 0) {
         CHUNK_SIZE = 1;
     }
