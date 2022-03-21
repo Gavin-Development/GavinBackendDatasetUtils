@@ -21,6 +21,7 @@
 #include <mutex>
 #include <tuple>
 #include <vector>
+#include <regex>
 
 #if defined(ONEAPI_ROOT)
 #include <CL/sycl.hpp>
@@ -346,6 +347,21 @@ private:
 
 };
 
+
+enum token_type {
+    TT_CHAR = 0,
+    TT_UID = 1,
+};
+
+typedef struct {
+    token_type type;
+    union {
+        char letter;
+        int uid;
+    };
+} uid_letter_token;
+
+
 class Tokenizer {
 public:
 
@@ -375,6 +391,7 @@ private:
     std::map<int, std::string> Vocab = {{0, END_OF_WORD}};
     int MaxVocabSize;
 
+    static std::string _remove_object_special_chars(const std::string& text);
     static std::list<uint64_t> _pad_incr(const std::list<uint64_t>& encoded);
     static std::list<uint64_t> _pad_decr(const std::list<uint64_t>& encoded);
     std::vector<uint64_t> _to_bytes(const std::string& text);
@@ -386,8 +403,39 @@ private:
                                                                    const std::string &eow);
     static std::vector<std::string> _split_sentences(const std::string &delimiter, std::vector<std::string> sentences,
                                                      const std::string &eow);
+    static std::vector<std::vector<uid_letter_token>> _split_sentences_token(const std::string &delimiter, std::vector<std::string> sentences,
+                                                                       const std::string &eow);
 
     static std::map<int, std::string> merge(std::map<int, std::string> vok1, std::map<int, std::string> vok2);
     static std::map<int, std::string> _build_vocab_for_string(std::vector<std::string> sentences,
                                                               std::string end_of_word, uint64_t max_vocab_size);
+};
+
+class TokenSequence {
+private:
+    std::vector<uid_letter_token> tokens;
+public:
+    TokenSequence();
+    explicit TokenSequence(std::vector<uid_letter_token> tokens);
+    explicit TokenSequence(const std::string& text);
+    ~TokenSequence();
+
+    [[nodiscard]] std::size_t size() const { return tokens.size(); };
+    std::size_t find(const char &c);
+
+    uid_letter_token &operator[](std::size_t idx) { return tokens[idx]; };
+
+    const uid_letter_token &operator[](std::size_t idx) const { return tokens[idx]; };
+
+    void push_back(const uid_letter_token &t) { tokens.push_back(t); };
+
+    void push_back(const char &c) { tokens.push_back({.type=TT_CHAR, .letter=c}); };
+
+    void push_back(const int &uid) { tokens.push_back({.type=TT_UID, .uid=uid}); };
+
+    void clear() { tokens.clear(); };
+
+    void erase(std::size_t idx) { tokens.erase(tokens.begin() + (int)idx); };
+
+    void replace_with_uid(TokenSequence &replace_chars, int uid);
 };
