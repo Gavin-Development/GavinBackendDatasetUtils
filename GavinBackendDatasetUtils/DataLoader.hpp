@@ -389,6 +389,10 @@ public:
 
     void erase(std::size_t idx) { tokens.erase(tokens.begin() + (int)idx); };
 
+    void insert(std::size_t idx, const uid_letter_token &t) { tokens.insert(tokens.begin() + (int)idx, t); };
+    void insert(std::size_t idx, const char &c) { tokens.insert(tokens.begin() + (int)idx, {.type=TT_CHAR, .letter=c}); };
+    void insert(std::size_t idx, const int &uid) { tokens.insert(tokens.begin() + (int)idx, {.type=TT_UID, .uid=uid}); };
+
     bool empty() { return tokens.empty(); };
 
     void replace_with_uid(TokenSequence &replace_chars, int uid);

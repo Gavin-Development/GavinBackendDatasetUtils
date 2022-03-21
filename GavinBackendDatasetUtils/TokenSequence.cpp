@@ -43,6 +43,7 @@ void TokenSequence::replace_with_uid(TokenSequence &replace_chars, int uid) {
             for (std::size_t i = 0; i < length; i++) {
                 this->tokens.erase(this->tokens.begin() + (int)first_letter_pos);
             }
+            this->tokens.insert(this->tokens.begin() + (int)first_letter_pos, length, token);
         }
     }
 }
