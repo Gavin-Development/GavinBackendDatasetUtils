@@ -63,6 +63,23 @@ bool TokenSequence::operator==(const TokenSequence &other) const {
 }
 
 
+bool TokenSequence::operator==(const std::string &other) const {
+    if (this->tokens.size() != other.size()) {
+        return false;
+    }
+    for (std::size_t i = 0; i < this->tokens.size(); ++i) {
+        if (this->tokens[i].letter != other[i]) {
+            return false;
+        }
+    }
+    return true;
+}
+
+
 bool TokenSequence::operator!=(const TokenSequence &other) const {
+    return !(*this == other);
+}
+
+bool TokenSequence::operator!=(const std::string &other) const {
     return !(*this == other);
 }

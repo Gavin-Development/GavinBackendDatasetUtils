@@ -376,6 +376,8 @@ public:
     uid_letter_token &operator[](std::size_t idx) { return tokens[idx]; };
     bool operator==(const TokenSequence &other) const;
     bool operator!=(const TokenSequence &other) const;
+    bool operator==(const std::string &other) const;
+    bool operator!=(const std::string &other) const;
 
     const uid_letter_token &operator[](std::size_t idx) const { return tokens[idx]; };
 
