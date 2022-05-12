@@ -1,7 +1,7 @@
 #include "DataLoader.hpp"
 
 int InitModule() {
-    std::cout << "GavinBackendDataSetTools Loaded. Please see readme.md for usage." << std::endl;
+    std::cout << "GavinBackendDataSetTools Loaded. Please see readme.md for usage. THIS VERSION IS ONEAPI ACCELERATED." << std::endl;
 
     std::cout << "Module init completed." << std::endl;
     return 0;
