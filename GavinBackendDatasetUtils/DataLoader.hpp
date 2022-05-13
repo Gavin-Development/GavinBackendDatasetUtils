@@ -21,7 +21,6 @@
 
 #include <CL/sycl.hpp>
 
-//#include "base64.hpp"
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
 #define BIN_FILE_DTYPE_INT32  (uint8_t)0
@@ -342,6 +341,42 @@ private:
     inline void ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo);
     inline void ReadRequiredHeadersFromFile(std::ifstream* File, BIN::SampleHeaderData* HeaderData);
 
+};
+
+class BINFile {
+public:
+    int startToken, endToken, sampleLength, paddingVal;
+    py::capsule DataCapsuel;
+    py::array_t<int> FileData;
+
+    BINFile(std::string dataPath, int startToken, int endToken, int sampleLength, int paddingVal);
+    BINFile(std::string dataPath);
+    ~BINFile();
+
+
+
+    // Returns the COPIED data at that index to the user.
+    py::array_t<int>* at(uint64_t Index);
+    // Returns the COPIED data between and inclusive of the indexes to the user.
+    py::array_t<int>* at(std::vector<uint64_t> Indices);
+
+    // Writes the data at that index to the file.
+    bool write(py::array_t<int>* pData);
+    // Writes data to the file at the given offset.
+    bool write(py::array_t<int>* pData, uint64_t Index);
+
+private:
+    uint64_t _HeaderSectionLength, _DataSectionLength, _DataSectionPosition;
+    std::fstream _File;
+
+    BIN::SampleHeaderData _SampleHeaderData;
+
+    int* _Buffer_int32;
+    uint24_t* _Buffer_int24;
+    uint16_t _Buffer_int16;
+    
+    inline _readsample(uint64_t Index);
+    inline _writesample(uint64_t Index);
 };
 
 class Tokenizer {
