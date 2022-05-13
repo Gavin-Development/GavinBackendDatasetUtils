@@ -14,6 +14,8 @@ The default dataset / file format is .BIN, it is designed to be highly compressa
 |------|------|-----------|
 |FileHeaderSectionLength|Uint64_t which contains info on the length of the header section.| 8 |
 |NumberOfSamplesInFile|Uint64_t which contains info on the number of samples in the file| 8 |
+|Header Section| Contains header info on each of the samples in the file| variable |
+|Data Section| Contains the data in mixed precision that the headers reference| variable |
 
 This is the LoadTrainDataST() function:
 ```python
