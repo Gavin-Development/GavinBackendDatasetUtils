@@ -366,14 +366,14 @@ public:
     bool write(py::array_t<int>* pData, uint64_t Index);
 
 private:
-    uint64_t _HeaderSectionLength, _DataSectionLength, _DataSectionPosition, _FileLength;
+    uint64_t _HeaderSectionLength, _DataSectionPosition, _FileLength, _NumberOfSamplesInFile;
     std::fstream _File;
 
     BIN::SampleHeaderData _SampleHeaderData;
 
     int* _Buffer_int32;
     uint24_t* _Buffer_int24;
-    uint16_t _Buffer_int16;
+    uint16_t* _Buffer_int16;
     
     //inline void _readsample(uint64_t Index);
     //inline void _writesample(uint64_t Index);
