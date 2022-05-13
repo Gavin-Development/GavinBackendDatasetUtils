@@ -350,7 +350,7 @@ public:
     py::array_t<int> FileData;
 
     BINFile(std::string dataPath, int startToken, int endToken, int sampleLength, int paddingVal);
-    BINFile(std::string dataPath);
+    //BINFile(std::string dataPath);
     ~BINFile();
 
 
@@ -366,7 +366,7 @@ public:
     bool write(py::array_t<int>* pData, uint64_t Index);
 
 private:
-    uint64_t _HeaderSectionLength, _DataSectionLength, _DataSectionPosition;
+    uint64_t _HeaderSectionLength, _DataSectionLength, _DataSectionPosition, _FileLength;
     std::fstream _File;
 
     BIN::SampleHeaderData _SampleHeaderData;
@@ -375,8 +375,8 @@ private:
     uint24_t* _Buffer_int24;
     uint16_t _Buffer_int16;
     
-    inline _readsample(uint64_t Index);
-    inline _writesample(uint64_t Index);
+    //inline void _readsample(uint64_t Index);
+    //inline void _writesample(uint64_t Index);
 };
 
 class Tokenizer {

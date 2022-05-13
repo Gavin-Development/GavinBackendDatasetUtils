@@ -30,6 +30,9 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def_readonly("Occurances", &Tokenizer::Commonality)
         .def("Tokenize", &Tokenizer::Tokenize);
 
+    py::class_<BINFile>(handle, "BINFile")
+        .def(py::init<std::string, int, int, int, int>());
+
 
 #ifdef VERSION_INFO
     handle.attr("__version__") = VERSION_INFO;
