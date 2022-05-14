@@ -324,6 +324,8 @@ namespace BIN {
 class DataGenerator {
 public:
     std::ifstream ToFile, FromFile;
+    BIN::SampleHeaderData* ToFileHeaderData, *FromFileHeaderData;
+
     uint64_t NumberOfSamplesInFile, ToFileLength, FromFileLength, BufferSize, FileHeaderLength, CurrentSampleNumber;
     int* ToSampleBuffer,* FromSampleBuffer;
     int startToken, endToken, sampleLength, paddingValue;
@@ -343,7 +345,8 @@ private:
     uint24_t* Buffer_int24;
     uint16_t* Buffer_int16;
 
-    void ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo);
+    inline void ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo);
+    inline void ReadRequiredHeadersFromFile(std::ifstream* File, BIN::SampleHeaderData* HeaderData);
 
 };
 
