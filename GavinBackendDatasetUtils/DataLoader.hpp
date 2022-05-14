@@ -6,6 +6,7 @@
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
+#include <pybind11/operators.h>
 #include <iostream>
 #include <string>
 #include <sstream>
@@ -365,6 +366,18 @@ public:
     // Writes data to the file at the given offset.
     bool write(py::array_t<int>* pData, uint64_t Index);
 
+
+    // Operator overloads
+
+    // When array index syntax is called with 1 value for index.
+    py::array_t<int> operator [](uint64_t Index);
+
+    // When someone wants to manually read a sample from an index. (not an individual word, a sample).
+    //py::array_t<int> operator =(uint64_t Index);
+
+    // If ur feeling particularly feisty that day and u wana slice or something, idk...
+    //py::array_t<int> operator [](std::vector<uint64_t> Indices);
+
 private:
     uint64_t _HeaderSectionLength, _DataSectionPosition, _FileLength, _NumberOfSamplesInFile;
     std::fstream _File;
@@ -375,7 +388,7 @@ private:
     uint24_t* _Buffer_int24;
     uint16_t* _Buffer_int16;
     
-    //inline void _readsample(uint64_t Index);
+    inline py::array_t<int> _readsample(uint64_t Index);
     //inline void _writesample(uint64_t Index);
 };
 

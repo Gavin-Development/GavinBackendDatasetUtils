@@ -31,7 +31,9 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def("Tokenize", &Tokenizer::Tokenize);
 
     py::class_<BINFile>(handle, "BINFile")
-        .def(py::init<std::string, int, int, int, int>());
+        .def(py::init<std::string, int, int, int, int>())
+        //.def("__getitem__", static_cast<py::array_t<int>(BINFile::*)(std::vector<uint64_t>)>(&BINFile::operator[]))
+        .def("__getitem__", static_cast<py::array_t<int>(BINFile::*)(uint64_t)>(&BINFile::operator[]));
 
 
 #ifdef VERSION_INFO

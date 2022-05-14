@@ -1,5 +1,7 @@
 #include "DataLoader.hpp"
 
+// default constructor / destructor stuff.
+
 BINFile::BINFile(std::string dataPath, int startToken, int endToken, int sampleLength, int paddingVal) : startToken(startToken), endToken(endToken), sampleLength(sampleLength), paddingVal(paddingVal) {
 #ifdef _DEBUG
 	std::cout << "Initialising BIN file handler." << std::endl;
@@ -81,4 +83,38 @@ BINFile::~BINFile() {
 	std::cout << "Called BINFile Destructor." << std::endl;
 #endif // _DEBUG
 	if (_File.is_open()) _File.close();
+}
+
+
+// Read and write sample functins (Inline for obvious reasons).
+
+inline py::array_t<int> BINFile::_readsample(uint64_t Index) {
+#ifdef _DEBUG
+	std::cout << "Private Method To Read Sample Called." << std::endl;
+#endif // _DEBUG
+
+	int* memory = (int*)malloc(sizeof(int) * 10);
+	py::capsule capsule(memory, [](void* memory) { delete reinterpret_cast<int*>(memory); });
+
+	py::array_t<int> RtnArr(
+		{ (uint64_t)sampleLength, (uint64_t)1 },
+		memory,
+		capsule
+		);
+	return RtnArr;
+};
+
+// Operator Overloads.
+
+py::array_t<int> BINFile::operator[](uint64_t Index) {
+#ifdef _DEBUG
+	std::cout << "Single variable Array indexing syntax overload." << std::endl;
+#endif // _DEBUG
+
+	if (Index >= _NumberOfSamplesInFile) {
+		std::cout << "Array index out of bounds for this file." << std::endl;
+		throw std::runtime_error("Array Index Out Of Bounds.");
+	}
+	else return _readsample(Index);
+
 }
