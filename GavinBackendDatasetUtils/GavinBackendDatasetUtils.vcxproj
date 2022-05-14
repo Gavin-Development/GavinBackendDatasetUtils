@@ -105,6 +105,7 @@
     <ClInclude Include="DataLoader.hpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="BINFile.cpp" />
     <ClCompile Include="DataGenerator.cpp" />
     <ClCompile Include="DataLoaderLegacySupport.cpp" />
     <ClCompile Include="DataLoaderMultiThread.cpp" />

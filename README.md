@@ -10,6 +10,13 @@ This tool set is a WIP suite of tools for authoring, managing & loading datasets
 ### New File Format
 The default dataset / file format is .BIN, it is designed to be highly compressable and efficient to load. The format is mostly complete but additions and tweaks are still being made.
 
+|Section|What it is|Length|
+|------|------|-----------|
+|FileHeaderSectionLength|Uint64_t which contains info on the length of the header section.| 8 |
+|NumberOfSamplesInFile|Uint64_t which contains info on the number of samples in the file| 8 |
+|Header Section| Contains header info on each of the samples in the file| variable |
+|Data Section| Contains the data in mixed precision that the headers reference| variable |
+
 This is the LoadTrainDataST() function:
 ```python
 samples = LTD.LoadTrainDataST(10000000, "C:/Users/User/Desktop/Gavin/GavinTraining/", "Tokenizer-3.to.BIN", 69108,66109, 52, 0)
