@@ -2,8 +2,8 @@
 #include <fstream>
 #include <DataLoader.hpp>
 
-std::vector<std::string> load_text(std::string filename) {
-    std::vector<std::string> texts;
+std::list<std::string> load_text(std::string filename) {
+    std::list<std::string> texts;
     std::ifstream input(filename);
     std::string lineBuffer;
     while (std::getline(input, lineBuffer)) {
@@ -11,62 +11,6 @@ std::vector<std::string> load_text(std::string filename) {
     }
     return texts;
 };
-
-
-class TokenizerTest : public ::testing::Test {
-protected:
-    virtual void SetUp() {
-        texts = load_text("test-lines.txt");
-        if (texts.empty()) {
-            std::cout << "Error: test-lines.txt not found" << std::endl;
-            throw std::runtime_error("Error: test-lines.txt not found");
-        }
-        TestTokenizer.build_vocab(texts);
-    }
-
-    virtual void TearDown() {
-        texts.clear();
-    }
-
-    std::vector<std::string> texts;
-    std::string name = "Test";
-    int vocab_size = 500;
-    Tokenizer EmptyTokenizer = Tokenizer(name, vocab_size);
-    Tokenizer TestTokenizer = Tokenizer(name+"-filled", vocab_size);
-    std::list<uint64_t> test_encoded_text = {586, 606, 607, 617, 1, // This
-                                                           607, 617, 1,  // is
-                                                           599, 1,  // a
-                                                           618, 603, 617, 618, 1}; // test
-
-    std::string test_decoded_text = "This is a test";
-};
-
-
-
-TEST_F(TokenizerTest, intialised_correctly) {
-    EXPECT_EQ(EmptyTokenizer.get_name(), name);
-    EXPECT_EQ(EmptyTokenizer.get_vocab_size(), 1);
-    EXPECT_EQ(TestTokenizer.get_name(), name+"-filled");
-}
-
-TEST_F(TokenizerTest, test_build_vocab) {
-    unsigned int vocab_length = TestTokenizer.get_vocab().size();
-    int error = ceil((double)vocab_length*0.1); // 10% error
-    EXPECT_NEAR(vocab_length, vocab_size, error);
-}
-
-
-TEST_F(TokenizerTest, encoder_test) {
-    std::list<uint64_t> encoded_text = TestTokenizer.encode("This is a test");
-    EXPECT_EQ(test_encoded_text, encoded_text);
-}
-
-
-TEST_F(TokenizerTest, decoder_test) {
-    std::string decoded_text = TestTokenizer.decode(test_encoded_text);
-    EXPECT_EQ(test_decoded_text, decoded_text);
-}
-
 
 TEST(DataLoaders, multi_threaded_loading) {
     auto data = LoadTrainDataMT(800, "./",

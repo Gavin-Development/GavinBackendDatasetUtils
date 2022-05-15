@@ -39,9 +39,6 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build .
         RESULT_VARIABLE result
         WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/googletest-download)
 
-configure_file(CMakeLists.txt.in SubwordTextEncoder-download/CMakeLists.txt)
-
-
 # Add pybind11 directly
 add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/pybind11-src
         ${CMAKE_CURRENT_BINARY_DIR}/pybind11-build

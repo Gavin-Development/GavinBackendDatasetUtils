@@ -24,20 +24,6 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def_readonly("ToSampleBuffer", &DataGenerator::ToSampleBufferArray_t)
         .def_readonly("FromSampleBuffer", &DataGenerator::FromSampleBufferArray_t);
 
-    py::class_<Tokenizer>(handle, "Tokenizer")
-        .def(py::init<std::string, uint64_t>())
-        .def(py::init<std::string>())
-        .def("encode", &Tokenizer::encode)
-        //.def("encoder_batch", &Tokenizer::encode_batch)
-        .def("decode", &Tokenizer::decode)
-        //.def("decode_batch", &Tokenizer::decode_batch)
-        .def("get_vocab_size", &Tokenizer::get_vocab_size)
-        .def("get_vocab", &Tokenizer::get_vocab)
-        .def("build_vocab", [](Tokenizer &t, std::vector<std::string> corpus) {
-            py::gil_scoped_release release;
-            t.build_vocab(std::move(corpus));
-        });
-
 
 #ifdef VERSION_INFO
     handle.attr("__version__") = VERSION_INFO;
