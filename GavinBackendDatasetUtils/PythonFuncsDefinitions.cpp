@@ -27,7 +27,7 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def(py::init<std::string>())
 
         .def_readonly("Words", &Tokenizer::Encodings)
-        .def_readonly("Occurances", &Tokenizer::Commonality)
+        .def_readonly("Occurrences", &Tokenizer::Commonality)
         .def("Tokenize", &Tokenizer::Tokenize);
 
     py::class_<BINFile>(handle, "BINFile")
