@@ -1,19 +1,17 @@
 #pragma once
 
-#ifdef _WIN32
 #include <corecrt.h>
-#endif
 
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
 #include <pybind11/stl.h>
 #include <pybind11/numpy.h>
+#include <pybind11/operators.h>
 #include <iostream>
 #include <string>
 #include <sstream>
 #include <fstream>
 #include <thread>
-#include <future>
 #include <stdio.h>
 #include <cstdlib>
 #include <stdexcept>
@@ -21,13 +19,9 @@
 #include <mutex>
 #include <tuple>
 #include <vector>
-#include <regex>
 
-#if defined(ONEAPI_ROOT)
 #include <CL/sycl.hpp>
-#endif
 
-//#include "base64.hpp"
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
 #define BIN_FILE_DTYPE_INT32  (uint8_t)0
@@ -348,4 +342,78 @@ private:
     inline void ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo);
     inline void ReadRequiredHeadersFromFile(std::ifstream* File, BIN::SampleHeaderData* HeaderData);
 
+};
+
+class BINFile {
+public:
+    int startToken, endToken, sampleLength, paddingVal;
+    py::capsule DataCapsuel;
+    py::array_t<int> FileData;
+
+    BINFile(std::string dataPath, int startToken, int endToken, int sampleLength, int paddingVal);
+    //BINFile(std::string dataPath);
+    ~BINFile();
+
+
+
+    // Returns the COPIED data at that index to the user.
+    py::array_t<int>* at(uint64_t Index);
+    // Returns the COPIED data between and inclusive of the indexes to the user.
+    py::array_t<int>* at(std::vector<uint64_t> Indices);
+
+    // Writes the data at that index to the file.
+    bool write(py::array_t<int>* pData);
+    // Writes data to the file at the given offset.
+    bool write(py::array_t<int>* pData, uint64_t Index);
+
+
+    // Operator overloads
+
+    // When array index syntax is called with 1 value for index.
+    py::array_t<int> operator [](uint64_t Index);
+
+    // When someone wants to manually read a sample from an index. (not an individual word, a sample).
+    //py::array_t<int> operator =(uint64_t Index);
+
+    // If ur feeling particularly feisty that day and u wana slice or something, idk...
+    //py::array_t<int> operator [](std::vector<uint64_t> Indices);
+
+private:
+    uint64_t _HeaderSectionLength, _DataSectionPosition, _FileLength, _NumberOfSamplesInFile;
+    std::fstream _File;
+    BIN::SampleHeaderData* _pSampleHeaderData;
+
+
+    int* _pBuffer_int32;
+    uint24_t* _pBuffer_int24;
+    uint16_t* _pBuffer_int16;
+    
+    inline py::array_t<int> _readsample(uint64_t Index);
+    //inline void _writesample(uint64_t Index);
+};
+
+class Tokenizer {
+public:
+    std::string TokenizerName;
+    std::vector<std::string> Encodings;
+    std::vector<int> Commonality;
+    uint64_t MaxVocabSize;
+
+    Tokenizer(std::string iTokenizerName, uint64_t iVocabSize);
+    Tokenizer(std::string iTokenizerPath);
+    
+    void Tokenize(std::vector<std::string> Samples);
+    void Tokenize_MT(std::vector<std::string> Samples);
+
+    //void SaveTokenizer();
+    //void LoadTokenizer();
+private:
+    int something;
+};
+
+
+class Handler {
+public:
+    Handler(std::string iTokenizerName, uint8_t iAccessMode);
+private:
 };
