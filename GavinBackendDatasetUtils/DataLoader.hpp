@@ -381,12 +381,12 @@ public:
 private:
     uint64_t _HeaderSectionLength, _DataSectionPosition, _FileLength, _NumberOfSamplesInFile;
     std::fstream _File;
+    BIN::SampleHeaderData* _pSampleHeaderData;
 
-    BIN::SampleHeaderData _SampleHeaderData;
 
-    int* _Buffer_int32;
-    uint24_t* _Buffer_int24;
-    uint16_t* _Buffer_int16;
+    int* _pBuffer_int32;
+    uint24_t* _pBuffer_int24;
+    uint16_t* _pBuffer_int16;
     
     inline py::array_t<int> _readsample(uint64_t Index);
     //inline void _writesample(uint64_t Index);

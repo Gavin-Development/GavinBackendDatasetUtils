@@ -70,9 +70,21 @@ BINFile::BINFile(std::string dataPath, int startToken, int endToken, int sampleL
 
 	// Pre Allocate The Temporary Read Buffers For Performance Reasons.
 	// This Is Only Done For The Single Threaded Loader.
-	_Buffer_int32 = (int*)malloc(sizeof(int) * sampleLength);
-	_Buffer_int24 = (uint24_t*)malloc(sizeof(uint24_t) * sampleLength);
-	_Buffer_int16 = (uint16_t*)malloc(sizeof(uint16_t) * sampleLength);
+	_pBuffer_int32 = (int*)malloc(sizeof(int) * sampleLength);
+	_pBuffer_int24 = (uint24_t*)malloc(sizeof(uint24_t) * sampleLength);
+	_pBuffer_int16 = (uint16_t*)malloc(sizeof(uint16_t) * sampleLength);
+
+	// Allocate and load up the header information for this file.
+
+	_pSampleHeaderData = (BIN::SampleHeaderData*)malloc(_HeaderSectionLength);
+
+	_File.seekg(16);
+	_File.read((char*)_pSampleHeaderData, _HeaderSectionLength);
+
+	// Some Test Code.
+	for (int i = 0; i < 10; i++) {
+		std::cout << _pSampleHeaderData[i].dtypeint16 << std::endl << _pSampleHeaderData[i].OffsetFromDataSectionStart << std::endl << _pSampleHeaderData[i].SampleLength << std::endl << std::endl;
+	}
 
 	// Calling File close to test.
 	_File.close();
@@ -86,7 +98,7 @@ BINFile::~BINFile() {
 }
 
 
-// Read and write sample functins (Inline for obvious reasons).
+// Read and write sample functions (Inline for obvious reasons).
 
 inline py::array_t<int> BINFile::_readsample(uint64_t Index) {
 #ifdef _DEBUG
