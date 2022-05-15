@@ -1,6 +1,9 @@
 #pragma once
 
+// windows only
+#ifdef _WIN32
 #include <corecrt.h>
+#endif
 
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
@@ -20,7 +23,9 @@
 #include <tuple>
 #include <vector>
 
+#if defined(ONEAPI_ROOT)
 #include <CL/sycl.hpp>
+#endif
 
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1

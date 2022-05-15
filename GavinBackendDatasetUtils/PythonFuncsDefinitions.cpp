@@ -22,13 +22,13 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def_readonly("ToSampleBuffer", &DataGenerator::ToSampleBufferArray_t)
         .def_readonly("FromSampleBuffer", &DataGenerator::FromSampleBufferArray_t);
 
-    py::class_<Tokenizer>(handle, "Tokenizer")
+    /* py::class_<Tokenizer>(handle, "Tokenizer") TODO(Scot_Survivor): Add tokenizer class
         .def(py::init<std::string, uint64_t>())
         .def(py::init<std::string>())
 
         .def_readonly("Words", &Tokenizer::Encodings)
         .def_readonly("Occurrences", &Tokenizer::Commonality)
-        .def("Tokenize", &Tokenizer::Tokenize);
+        .def("Tokenize", &Tokenizer::Tokenize); */
 
     py::class_<BINFile>(handle, "BINFile")
         .def(py::init<std::string, int, int, int, int>())
