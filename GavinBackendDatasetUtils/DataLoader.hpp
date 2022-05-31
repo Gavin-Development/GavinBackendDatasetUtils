@@ -20,7 +20,7 @@
 #include <tuple>
 #include <vector>
 
-#include <CL/sycl.hpp>
+//#include <CL/sycl.hpp>
 
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
@@ -308,8 +308,11 @@ void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::stri
 
 namespace BIN {
 	struct SampleHeaderData {
+        // Offset from data section start in bytes.
 		uint64_t OffsetFromDataSectionStart;
+        // Sample length in bytes.
 		uint16_t SampleLength;
+        // flag for D-type.
 		uint8_t dtypeint16;
 	};
 
@@ -346,25 +349,25 @@ private:
 
 class BINFile {
 public:
+    uint64_t NumberOfSamplesInFile;
     int startToken, endToken, sampleLength, paddingVal;
     py::capsule DataCapsuel;
     py::array_t<int> FileData;
 
     BINFile(std::string dataPath, int startToken, int endToken, int sampleLength, int paddingVal);
-    //BINFile(std::string dataPath);
+    BINFile(std::string dataPath, uint64_t numberOfSamples, int startToken, int endToken, int sampleLength, int paddingVal);
     ~BINFile();
 
 
-
-    // Returns the COPIED data at that index to the user.
-    py::array_t<int>* at(uint64_t Index);
-    // Returns the COPIED data between and inclusive of the indexes to the user.
-    py::array_t<int>* at(std::vector<uint64_t> Indices);
 
     // Writes the data at that index to the file.
     bool write(py::array_t<int>* pData);
     // Writes data to the file at the given offset.
     bool write(py::array_t<int>* pData, uint64_t Index);
+
+    // read the data at indices / slice from the file.
+
+    py::array_t<int> get_slice(uint64_t StartIndex, uint64_t EndIndex);
 
 
     // Operator overloads
@@ -372,23 +375,21 @@ public:
     // When array index syntax is called with 1 value for index.
     py::array_t<int> operator [](uint64_t Index);
 
-    // When someone wants to manually read a sample from an index. (not an individual word, a sample).
-    //py::array_t<int> operator =(uint64_t Index);
-
-    // If ur feeling particularly feisty that day and u wana slice or something, idk...
-    //py::array_t<int> operator [](std::vector<uint64_t> Indices);
 
 private:
     uint64_t _HeaderSectionLength, _DataSectionPosition, _FileLength, _NumberOfSamplesInFile;
     std::fstream _File;
     BIN::SampleHeaderData* _pSampleHeaderData;
+    //bool _WriteOnlyMode;
 
 
     int* _pBuffer_int32;
     uint24_t* _pBuffer_int24;
     uint16_t* _pBuffer_int16;
+
+    bool _createnewfile(std::string& pDataPath);
     
-    inline py::array_t<int> _readsample(uint64_t Index);
+    inline int* _readsample(uint64_t Index);
     //inline void _writesample(uint64_t Index);
 };
 

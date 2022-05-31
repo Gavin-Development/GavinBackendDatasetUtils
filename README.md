@@ -12,11 +12,32 @@ The default dataset / file format is .BIN, it is designed to be highly compressa
 
 |Section|What it is|Length|
 |------|------|-----------|
-|FileHeaderSectionLength|Uint64_t which contains info on the length of the header section.| 8 |
+|FileHeaderSectionLength|Uint64_t which contains info on the length of the header section (Header section length + 8 for the bytes to store length).| 8 |
 |NumberOfSamplesInFile|Uint64_t which contains info on the number of samples in the file| 8 |
 |Header Section| Contains header info on each of the samples in the file| variable |
 |Data Section| Contains the data in mixed precision that the headers reference| variable |
 
+### BINFile class
+This is to replace the generator and enable extended functionality such as array syntax overloading, array slicing and full memory management for loaded data. This object can be treated very much like an array but the data backing it is actually stored on disk and streamed in and decompressed upon user request for data. Current version only has full support for reading existing files with full operator overloading and slicing capabilities via the `get_slice(Start, End)` method.
+
+**NOTE** This is the preferred method for reading from BIN files now as all other methods are now not being updated and should be considered depreciated.
+
+```
+Samples = LTD.BINFile("Tokenizer-3-to.BIN",69,420,50,0)
+
+Sample = Samples[0]
+```
+This will setup the BINFile class and point it to a file with start token set to 69, end token to 420, desired sample length set to 50, and padding val set to 0. As can be seen in the code snippet it supports array index operator overloading to stream in from the disk.
+
+```
+Data_Slice = Samples.get_slice(0,2)
+```
+This will get the first 2 samples from the BIN file and return them as a 2D array of size (slize_size, sample_length).
+
+
+**NOTE** Future support for creating and modifying BIN files with this class is coming soonish when i get on with implimenting it.
+
+### DOP functions
 This is the LoadTrainDataST() function:
 ```python
 samples = LTD.LoadTrainDataST(10000000, "C:/Users/User/Desktop/Gavin/GavinTraining/", "Tokenizer-3.to.BIN", 69108,66109, 52, 0)
@@ -29,7 +50,7 @@ samples = LTD.LoadTrainDataMT(10000000, "C:/Users/User/Desktop/Gavin/GavinTraini
 ```
 This function takes inputs in exactly the same way as LoadTrainDataST() but instead has a differing internal mechanism to be more memory efficient and utilise multiple cores to speed up loading of the dataset. It will not always return the full number of samples if it is now divisible by the number of threads avalible without a remainder. 
 
-**NOTE** This is the preferred method of loading the dataset due to its speed, memory efficiency and overall performance.
+**NOTE** This is the most performant function for loading the dataset but offers minimal flexibility and high RAM usage for large datasets.
 
 This is the ConvertDataSet() function:
 ```python
@@ -51,7 +72,7 @@ Generator.UpdateBuffer()
 ```
 This will read the next *100_000* samples from each of the files and load them up into the respective buffers.
 
-**NOTE** This is the first working implimentation so it will be slow and it wont error handle for you. The generator will allocate 2 buffers that are exposed to python and re fill the *same* 2 buffers with new samples each time UpdateBuffer() is called. You will need to call UpdateBuffer() after initialisation to fill the buffers.
+**NOTE** This is being depreciated and succeeded by the BINFile class.
 
 ### Old File Format
 Currently there is good support for the OG file format (pickled by python) with functions to load it and convert it to a new .BIN format.
@@ -67,7 +88,7 @@ This will load 10,000,000 samples from the specified file in the specified direc
 This function will save training data sets authored in python into the BIN format for later ingest by the training script.
 
 ## To Do
-* Impliment a data stream class that dynamically streams in larger datasets to allow significantly lower memory usage during training of gavin. This mechanism is under investigation and not currently being implimented nor guarenteed as a feature.
+* Add functionality to data streaming class to improve usability and performance while adding more functionality.
 * Investigate memory usage of ST impl to posibaly optimise & restructure code to eliminate un neccesary operations.
 
 ## Known issues
