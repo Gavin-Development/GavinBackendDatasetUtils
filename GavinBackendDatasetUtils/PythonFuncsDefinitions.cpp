@@ -32,8 +32,11 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
 
     py::class_<BINFile>(handle, "BINFile")
         .def(py::init<std::string, int, int, int, int>())
+        .def(py::init<std::string, int, int, int, int, int>())
         .def_readonly("NumberOfSamples", &BINFile::NumberOfSamplesInFile)
+        .def_readonly("MaxNumberOfSamples", &BINFile::MaxNumberOfSamples)
         .def("get_slice", &BINFile::get_slice)
+        .def("append", &BINFile::append)
         .def("__getitem__", static_cast<py::array_t<int>(BINFile::*)(uint64_t)>(&BINFile::operator[]));
 
 

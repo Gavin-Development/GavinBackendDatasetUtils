@@ -30,15 +30,17 @@ BINFile::BINFile(std::string dataPath, int startToken, int endToken, int sampleL
 
 		// Get Number Of Samples In The File.
 		_File.seekg(8);
-		_File.read((char*)&_NumberOfSamplesInFile, sizeof(uint64_t));
-		// Set the publically accessable Number Of Samples In File.
-		NumberOfSamplesInFile = _NumberOfSamplesInFile;
+		_File.read((char*)&NumberOfSamplesInFile, sizeof(uint64_t));
+
+		// Determine the maximum number of possible samples in the file.
+		_MaxNumSamples  = (_HeaderSectionLength - 8) / sizeof(BIN::SampleHeaderData);
+		MaxNumberOfSamples = _MaxNumSamples;
 
 		// Determine The Position Of The Start Of The Data Section Length.
 		_DataSectionPosition = 8 + _HeaderSectionLength;
 
 		// Setup and load up the file header data.
-		_pSampleHeaderData = (BIN::SampleHeaderData*)malloc(_NumberOfSamplesInFile * sizeof(BIN::SampleHeaderData));
+		_pSampleHeaderData = (BIN::SampleHeaderData*)malloc(_HeaderSectionLength - 8);
 		_File.seekg(16);
 		_File.read((char*)_pSampleHeaderData, _HeaderSectionLength);
 
@@ -50,16 +52,26 @@ BINFile::BINFile(std::string dataPath, int startToken, int endToken, int sampleL
 	}
 };
 
-BINFile::BINFile(std::string dataPath, uint64_t numberOfSamples, int startToken, int endToken, int sampleLength, int paddingVal) : _NumberOfSamplesInFile(numberOfSamples), startToken(startToken), endToken(endToken), sampleLength(sampleLength), paddingVal(paddingVal) {
+BINFile::BINFile(std::string dataPath, uint64_t numberOfSamples, int startToken, int endToken, int sampleLength, int paddingVal) : _MaxNumSamples(numberOfSamples), startToken(startToken), endToken(endToken), sampleLength(sampleLength), paddingVal(paddingVal) {
 #ifdef _DEBUG
 	std::cout << "New File Constructor called." << std::endl;
 #endif // _DEBUG
 
-	// Setup some stuff.
-	_HeaderSectionLength = _NumberOfSamplesInFile * sizeof(BIN::SampleHeaderData);
-	_DataSectionPosition = _HeaderSectionLength + 16;
+	// Setup the file in memory
+	_HeaderSectionLength = _MaxNumSamples * sizeof(BIN::SampleHeaderData);
+	_DataSectionPosition = _HeaderSectionLength + 8;
+	NumberOfSamplesInFile = 0;
 
-	if (_createnewfile(dataPath) != true) throw std::runtime_error("Failed To Create New BIN File.");
+	_pSampleHeaderData = (BIN::SampleHeaderData*)malloc(sizeof(BIN::SampleHeaderData) * _MaxNumSamples);
+
+	// Writing in placeholder header information.
+
+	// Set the values for each of the sample header data structs stored in RAM.
+	for (size_t i = 0; i < _MaxNumSamples; i++) {
+		_pSampleHeaderData[i] = { (uint64_t)0,(uint16_t)0,(uint8_t)0 };
+	}
+
+	if (_createnewfile(dataPath) != true) { std::cout << "Failed To Create New BIN File." << std::endl; throw std::runtime_error("Failed To Create New BIN File."); }
 
 	// Open the file with read and write and move to the end of it.
 	_File = std::fstream(dataPath, std::ios::ate | std::ios::binary | std::ios::out | std::ios::in);
@@ -72,6 +84,13 @@ BINFile::~BINFile() {
 #ifdef _DEBUG
 	std::cout << "Called BINFile Destructor." << std::endl;
 #endif // _DEBUG
+
+	// Write data back to the file.
+
+
+	// TO DO.
+
+	// Close the file once done.
 	if (_File.is_open()) _File.close();
 }
 
@@ -83,25 +102,30 @@ bool BINFile::_createnewfile(std::string& pDataPath) {
 	std::cout << "Creating New BIN File." << std::endl;
 #endif
 
-	_File = std::fstream(pDataPath, std::ios::out | std::ios::binary | std::ios::app);
+	_File = std::fstream(pDataPath, std::ios::out | std::ios::binary);
 
 	if (!_File.is_open()) {
 		std::cout << "Failed To Open New File." << std::endl;
 		return false;
 	}
-	// Writing Placeholder Header Section Length And Number Of Samples Values To The File.
 
+#ifdef _DEBUG
+	std::cout << "File has been created." << std::endl;
+#endif // _DEBUG
+
+	// seek to beginning of the file.
+	_File.seekg(0);
+
+	// Writing Placeholder Header Section Length And Number Of Samples Values To The File.
 	_File.write((const char*)&_HeaderSectionLength, sizeof(uint64_t));
 
-	_File.write((const char*)static_cast<uint64_t>(0), sizeof(uint64_t));
+	_File.seekg(8);
 
-	// Writing in placeholder header information.
+	_File.write((const char*)&NumberOfSamplesInFile, sizeof(uint64_t));
 
-	BIN::SampleHeaderData PlaceHolderInfo{ 0, 0, 0 };
-
-	for (size_t i = 0; i < _NumberOfSamplesInFile; i++) {
-		_File.write((const char*)&PlaceHolderInfo, sizeof(BIN::SampleHeaderData));
-	}
+	// Write the whole header sample data array to the file.
+	_File.seekg(16);
+	_File.write((const char*)_pSampleHeaderData, _MaxNumSamples * sizeof(BIN::SampleHeaderData));
 
 	// close the file as we opened in append mode.
 	_File.close();
@@ -260,6 +284,133 @@ inline int* BINFile::_readsample(uint64_t Index) {
 	return memory;
 };
 
+inline void BINFile::_writesample(uint64_t Index, py::array_t<int> Arr) {
+#ifdef _DEBUG
+	std::cout << "Writing Sample To File." << std::endl;
+#endif // _DEBUG
+
+	bool int16compatible = true, int24compatible = true;
+
+	std::vector<uint16_t> Int16Vec;
+	std::vector<uint24_t> Int24Vec;
+
+	// check if the sample can be expressed as a mixed or lower precision format in the file.
+	for (size_t i = 0; i < Arr.size(); i++) {
+		if (Arr.at(i) > UINT16_MAX) {
+			int16compatible = false;
+		}
+
+		if (Arr.at(i) > UINT24_MAX) {
+			int24compatible = false;
+		}
+	}
+
+	// If Int16 compatible.
+	if (int16compatible) {
+
+		// Cast the values to Int16 vector.
+		for (size_t i = 0; i < Arr.size(); i++) {
+			Int16Vec.push_back(static_cast<uint16_t>(Arr.at(i)));
+		}
+
+		// Generate Header Info.
+
+		// If this is the first sample.
+		if (Index == 0) {
+			_pSampleHeaderData[Index] = {
+				(uint64_t)0,
+				(uint16_t)(Int16Vec.size() * sizeof(uint16_t)),
+				BIN_FILE_DTYPE_INT16
+			};
+		}
+		// If not first sample
+		else {
+			_pSampleHeaderData[Index] = {
+				(uint64_t)(_pSampleHeaderData[Index - 1].OffsetFromDataSectionStart + _pSampleHeaderData[Index - 1].SampleLength),
+				(uint16_t)(Int16Vec.size() * sizeof(uint16_t)),
+				BIN_FILE_DTYPE_INT16
+			};
+		}
+
+		// Seek to the samples header frame position and write the header to the file.
+		_File.seekg((sizeof(BIN::SampleHeaderData) * Index) + 16);
+		_File.write((const char*)&_pSampleHeaderData[Index], sizeof(BIN::SampleHeaderData));
+
+		// Seek to the data position and write the data to disk.
+		_File.seekg(_pSampleHeaderData[Index].OffsetFromDataSectionStart + _DataSectionPosition);
+		_File.write((const char*)Int16Vec.data(), sizeof(uint16_t) * Int16Vec.size());
+	}
+	// If not Int 16 but is Int24 compatible.
+	if (!int16compatible && int24compatible) {
+
+		// Cast the calues to Int24 vector.
+		for (size_t i = 0; i < Arr.size(); i++) {
+			Int24Vec.push_back(static_cast<uint24_t>(Arr.at(i)));
+		}
+
+		// Generate Header Info.
+
+		// If this is the first sample.
+		if (Index == 0) {
+			_pSampleHeaderData[Index] = {
+				(uint64_t)0,
+				(uint16_t)(Int24Vec.size() * sizeof(uint24_t)),
+				BIN_FILE_DTYPE_INT24
+			};
+		}
+		// If not first sample
+		else {
+			_pSampleHeaderData[Index] = {
+				(uint64_t)(_pSampleHeaderData[Index - 1].OffsetFromDataSectionStart + _pSampleHeaderData[Index - 1].SampleLength),
+				(uint16_t)(sizeof(uint24_t) * Int24Vec.size()),
+				BIN_FILE_DTYPE_INT24
+			};
+		}
+
+		// Seek to the samples header frame position and write the header to the file.
+		_File.seekg((sizeof(BIN::SampleHeaderData) * Index) + 16);
+		_File.write((const char*)&_pSampleHeaderData[Index], sizeof(BIN::SampleHeaderData));
+
+		// Seek to the data position and write the data to disk.
+		_File.seekg(_pSampleHeaderData[Index].OffsetFromDataSectionStart + _DataSectionPosition);
+		_File.write((const char*)Int24Vec.data(), sizeof(uint24_t) * Int24Vec.size());
+	}
+
+	// If only Int32 compatible.
+	if (!int16compatible && !int24compatible) {
+
+		// If this is the first sample.
+		if (Index == 0) {
+			_pSampleHeaderData[Index] = {
+				(uint64_t)0,
+				(uint16_t)(Arr.size() * sizeof(int)),
+				BIN_FILE_DTYPE_INT32
+			};
+		}
+		// If not first sample
+		else {
+			_pSampleHeaderData[Index] = {
+				(uint64_t)(_pSampleHeaderData[Index - 1].OffsetFromDataSectionStart + _pSampleHeaderData[Index - 1].SampleLength),
+				(uint16_t)(sizeof(int) * Arr.size()),
+				BIN_FILE_DTYPE_INT32
+			};
+		}
+
+		// Seek to the samples header frame position and write the header to the file.
+		_File.seekg((sizeof(BIN::SampleHeaderData) * Index) + 16);
+		_File.write((const char*)&_pSampleHeaderData[Index], sizeof(BIN::SampleHeaderData));
+
+		// Seek to the sample data position and write the data to the disk.
+		_File.seekg(_pSampleHeaderData[Index].OffsetFromDataSectionStart + _DataSectionPosition);
+		_File.write((const char*)Arr.data(), sizeof(int) * Arr.size());
+	}
+
+#ifdef _DEBUG
+	std::cout << "Sample Written To File." << std::endl;
+#endif // _DEBUG
+
+}
+
 
 // Operator Overloads & User accessable data manipulation methods.
 
@@ -269,7 +420,7 @@ py::array_t<int> BINFile::operator[](uint64_t Index) {
 #endif // _DEBUG
 
 	// check if the requested sample is in range of the file size.
-	if (Index >= _NumberOfSamplesInFile) {
+	if (Index >= NumberOfSamplesInFile) {
 		std::cout << "Array index out of bounds for this file." << std::endl;
 		throw std::runtime_error("Array Index Out Of Bounds.");
 	}
@@ -291,7 +442,6 @@ py::array_t<int> BINFile::operator[](uint64_t Index) {
 
 }
 
-
 py::array_t<int> BINFile::get_slice(uint64_t StartIndex, uint64_t EndIndex) {
 #ifdef _DEBUG
 	std::cout << "User has called get_slice method to get a slice of the data." << std::endl;
@@ -299,7 +449,7 @@ py::array_t<int> BINFile::get_slice(uint64_t StartIndex, uint64_t EndIndex) {
 
 	// check if the requested sample is in range of the file size.
 	for (uint64_t i = StartIndex; i < EndIndex; i++) {
-		if (i >= _NumberOfSamplesInFile) {
+		if (i >= NumberOfSamplesInFile) {
 			std::cout << "Array index out of bounds for this file." << std::endl;
 			throw std::runtime_error("Array Index Out Of Bounds.");
 		}
@@ -324,3 +474,30 @@ py::array_t<int> BINFile::get_slice(uint64_t StartIndex, uint64_t EndIndex) {
 
 	return RtnArr;
 };
+
+bool BINFile::append(py::array_t<int> Data) {
+#ifdef _DEBUG
+	std::cout << "Append Data To File Function Called." << std::endl;
+#endif // _DEBUG
+
+	// Check if the append op will take us out of range of the file size.
+	if (NumberOfSamplesInFile >= _MaxNumSamples) {
+		std::cout << "Unable to Append more data as file limit has been reached." << std::endl;
+		return false;
+	}
+	// If the append is deemed to be valid and within file size than it can happen.
+	else {
+		_writesample(NumberOfSamplesInFile, Data);
+
+		// Seek to the Numberofsamplesinfile data position and incriment by 1.
+		NumberOfSamplesInFile++;
+		_File.seekg(8);
+		_File.write((const char*)&NumberOfSamplesInFile, sizeof(uint64_t));
+
+#ifdef _DEBUG
+		std::cout << "Sample Written To File And NumberOfSamplesInFile Value Iterated." << std::endl;
+#endif // _DEBUG
+		return true;
+	}
+
+}

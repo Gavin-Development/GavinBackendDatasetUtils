@@ -30,7 +30,6 @@
 #define UINT24_MAX (uint32_t)16777215
 
 
-
 // Thanks to https://stackoverflow.com/questions/2682725/int24-24-bit-integral-datatype
 // Used their code as base for this class as i cba to spend all my time implementing uint24_t from scratch.
 
@@ -314,7 +313,11 @@ namespace BIN {
 		uint16_t SampleLength;
         // flag for D-type.
 		uint8_t dtypeint16;
+
+        //SampleHeaderData(int a, int b, int c) : OffsetFromDataSectionStart(a), SampleLength(b), dtypeint16(c) {};
 	};
+
+    
 
 };
 
@@ -349,10 +352,8 @@ private:
 
 class BINFile {
 public:
-    uint64_t NumberOfSamplesInFile;
+    uint64_t NumberOfSamplesInFile, MaxNumberOfSamples;
     int startToken, endToken, sampleLength, paddingVal;
-    py::capsule DataCapsuel;
-    py::array_t<int> FileData;
 
     BINFile(std::string dataPath, int startToken, int endToken, int sampleLength, int paddingVal);
     BINFile(std::string dataPath, uint64_t numberOfSamples, int startToken, int endToken, int sampleLength, int paddingVal);
@@ -361,9 +362,7 @@ public:
 
 
     // Writes the data at that index to the file.
-    bool write(py::array_t<int>* pData);
-    // Writes data to the file at the given offset.
-    bool write(py::array_t<int>* pData, uint64_t Index);
+    bool append(py::array_t<int> Data);
 
     // read the data at indices / slice from the file.
 
@@ -377,7 +376,7 @@ public:
 
 
 private:
-    uint64_t _HeaderSectionLength, _DataSectionPosition, _FileLength, _NumberOfSamplesInFile;
+    uint64_t _HeaderSectionLength, _DataSectionPosition, _FileLength, _MaxNumSamples;
     std::fstream _File;
     BIN::SampleHeaderData* _pSampleHeaderData;
     //bool _WriteOnlyMode;
@@ -389,8 +388,11 @@ private:
 
     bool _createnewfile(std::string& pDataPath);
     
+    // Reads sample from index. No error checking is done in this function.
     inline int* _readsample(uint64_t Index);
-    //inline void _writesample(uint64_t Index);
+
+    // Writes sample to given Index. No error checking is done in this function.
+    inline void _writesample(uint64_t Index, py::array_t<int> Arr);
 };
 
 class Tokenizer {
@@ -410,11 +412,4 @@ public:
     //void LoadTokenizer();
 private:
     int something;
-};
-
-
-class Handler {
-public:
-    Handler(std::string iTokenizerName, uint8_t iAccessMode);
-private:
 };

@@ -246,6 +246,7 @@ DataGenerator::~DataGenerator() {
 	free(ToSampleBuffer);
 	free(FromSampleBuffer);
 
+
 	free(Buffer_int32);
 	free(Buffer_int24);
 	free(Buffer_int16);
