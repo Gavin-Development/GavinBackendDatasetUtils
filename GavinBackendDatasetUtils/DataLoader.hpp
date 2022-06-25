@@ -20,7 +20,7 @@
 #include <tuple>
 #include <vector>
 
-//#include <CL/sycl.hpp>
+#include <CL/sycl.hpp>
 
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
@@ -403,13 +403,17 @@ public:
     uint64_t MaxVocabSize;
 
     Tokenizer(std::string iTokenizerName, uint64_t iVocabSize);
-    Tokenizer(std::string iTokenizerPath);
-    
-    void Tokenize(std::vector<std::string> Samples);
-    void Tokenize_MT(std::vector<std::string> Samples);
 
-    //void SaveTokenizer();
-    //void LoadTokenizer();
+    // Build Encodes Functions.
+    void BuildEncodes(std::vector<std::string> Samples);
+
+    // Encode Strings Functions.
+    std::vector<int> Encode_GPU(std::vector<std::string> Samples);
+
+    // Decode Strings Functions
+    std::vector<std::string> Decode_CPU(std::vector<int> Samples);
+
+
 private:
     int something;
 };

@@ -24,11 +24,12 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
 
     py::class_<Tokenizer>(handle, "Tokenizer")
         .def(py::init<std::string, uint64_t>())
-        .def(py::init<std::string>())
 
         .def_readonly("Words", &Tokenizer::Encodings)
         .def_readonly("Occurrences", &Tokenizer::Commonality)
-        .def("Tokenize", &Tokenizer::Tokenize);
+        .def("Encode_GPU", &Tokenizer::Encode_GPU)
+        .def("Decode_CPU", &Tokenizer::Decode_CPU)
+        .def("BuildEncodes", &Tokenizer::BuildEncodes);
 
     py::class_<BINFile>(handle, "BINFile")
         .def(py::init<std::string, int, int, int, int>())
