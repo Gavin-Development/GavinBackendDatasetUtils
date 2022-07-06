@@ -60,7 +60,7 @@ This function will load up the Tokenizer-3.from file, load it and transcode it t
 It has minimal optimisation as its only meant to be a temporary measure for compatibility as we transition to BIN format.
 
 ### Generator
-The last commit adds in the first version of a working data generator. It isnt blazing fast (yet) but it will do the trick where system RAM is a limiting factor for loading the dataset. It has 2 array exposed to the user (ToSampleBuffer, FromSampleBuffer), it has initialisation and buffer update methods exposed aswell.
+The data generator. It isnt blazing fast (yet) but it will do the trick where system RAM is a limiting factor for loading the dataset. It has 2 arrays exposed to the user (ToSampleBuffer, FromSampleBuffer), it has initialisation and buffer update methods exposed aswell.
 
 ```python
 Generator = LTD.DataGenerator("./", "To_Samples.BIN", "From_Samples.BIN", 100_000, 69108, 66109, 52, 0)

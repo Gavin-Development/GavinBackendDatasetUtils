@@ -399,19 +399,21 @@ class Tokenizer {
 public:
     std::string TokenizerName;
     std::vector<std::string> Encodings;
-    std::vector<int> Commonality;
-    uint64_t MaxVocabSize;
+    std::vector<uint64_t> Commonalities;
+    uint64_t MaxVocabSize, MaxEncodeSize = 2;
 
     Tokenizer(std::string iTokenizerName, uint64_t iVocabSize);
 
     // Build Encodes Functions.
     void BuildEncodes(std::vector<std::string> Samples);
+    void BuildEncodes_GPU(std::vector<std::string> Samples);
 
     // Encode Strings Functions.
-    std::vector<int> Encode_GPU(std::vector<std::string> Samples);
+    //std::vector<int> Encode_GPU(std::vector<std::string> Samples); // Needs re write.
+    std::vector<int> Encode(std::vector<std::string> Samples);
 
     // Decode Strings Functions
-    std::vector<std::string> Decode_CPU(std::vector<int> Samples);
+    std::vector<std::string> Decode(std::vector<int> Samples); // Needs re write.
 
 
 private:
