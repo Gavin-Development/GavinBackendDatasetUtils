@@ -19,6 +19,7 @@
 #include <mutex>
 #include <tuple>
 #include <vector>
+#include <math.h>
 
 #include <CL/sycl.hpp>
 
@@ -400,9 +401,11 @@ public:
     std::string TokenizerName;
     std::vector<std::string> Encodings;
     std::vector<uint64_t> Commonalities;
-    uint64_t MaxVocabSize, MaxEncodeSize = 2;
 
-    Tokenizer(std::string iTokenizerName, uint64_t iVocabSize);
+    Tokenizer(std::string iTokenizerName);
+
+    // Get Vocab Size function.
+    int GetVocabSize() { return Encodings.size(); };
 
     // Build Encodes Functions.
     void BuildEncodes(std::vector<std::string> Samples);
@@ -410,12 +413,13 @@ public:
 
     // Encode Strings Functions.
     //std::vector<int> Encode_GPU(std::vector<std::string> Samples); // Needs re write.
-    std::vector<int> Encode(std::vector<std::string> Samples);
+    std::vector<std::vector<int>> Encode(std::vector<std::string> Samples);
 
     // Decode Strings Functions
-    std::vector<std::string> Decode(std::vector<int> Samples); // Needs re write.
-
+    std::string Decode(std::vector<int> Samples); // Needs re write.
 
 private:
-    int something;
+
+    // Sort the Encodings & Commonalities vectors to be in the order of descending commonality.
+    void _SortEncodings();
 };

@@ -23,12 +23,13 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def_readonly("FromSampleBuffer", &DataGenerator::FromSampleBufferArray_t);
 
     py::class_<Tokenizer>(handle, "Tokenizer")
-        .def(py::init<std::string, uint64_t>())
+        .def(py::init<std::string>())
 
         .def_readonly("Words", &Tokenizer::Encodings)
         .def_readonly("Occurrences", &Tokenizer::Commonalities)
-        //.def("Encode_GPU", &Tokenizer::Encode)
-        .def("Decode_CPU", &Tokenizer::Decode)
+        .def("Encode", &Tokenizer::Encode)
+        .def("GetVocabSize", &Tokenizer::GetVocabSize)
+        .def("Decode", &Tokenizer::Decode)
         .def("BuildEncodes_GPU", &Tokenizer::BuildEncodes_GPU)
         .def("BuildEncodes", &Tokenizer::BuildEncodes);
 

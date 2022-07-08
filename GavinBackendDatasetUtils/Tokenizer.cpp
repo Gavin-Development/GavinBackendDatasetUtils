@@ -1,18 +1,21 @@
 #include "DataLoader.hpp"
 
 // Constructors.
-Tokenizer::Tokenizer(std::string iTokenizerName, uint64_t iVocabSize) {
+Tokenizer::Tokenizer(std::string iTokenizerName) {
 #ifdef _DEBUG
 	std::cout << "Initialising a new tokenizer." << std::endl;
 #endif // _DEBUG
 
-	// set the max vocab sizes.
+	// Set up some Tokenizer variables.
 	TokenizerName = iTokenizerName;
-	MaxVocabSize = iVocabSize;
 
-	// Set the array sizes.
 	Encodings.resize(0);
 	Commonalities.resize(0);
+
+#ifdef _DEBUG
+	std::cout << "Initialisation Done." << std::endl;
+#endif // _DEBUG
+
 };
 
 // Build Encodes Functions.
@@ -33,8 +36,12 @@ void Tokenizer::BuildEncodes(std::vector<std::string> Samples) {
 		vSamplesCharSize = vSamplesChar.size();
 		vSamplesChar.resize(vSamplesCharSize + Samples[i].size());
 		memcpy(&vSamplesChar[vSamplesCharSize], Samples[i].c_str(), sizeof(char) * Samples[i].size());
-		vSamplesChar.push_back((char)0);
+		vSamplesChar.push_back((char)32);
 	}
+
+	// Set a value for the interval to report progress.
+	vSamplesCharSize = vSamplesChar.size();
+	uint64_t ProgressReportInterval = vSamplesCharSize / 100;
 
 	// Setup a vector of encodes found during THIS tokenizer functions lifespan.
 	// This is used if you are modifying an existing tokenizers encodes by adding data to them.
@@ -44,6 +51,12 @@ void Tokenizer::BuildEncodes(std::vector<std::string> Samples) {
 	for (uint64_t i = 0; i < (vSamplesChar.size() - 1); i++) {
 		// Setup the byte pair string to make syntax easier for comparisons.
 		std::string BytePair{ vSamplesChar[i], vSamplesChar[i + 1] };
+
+		// Report progress.
+		if (i % ProgressReportInterval == 0) {
+			double PercentDone = (((double)i / vSamplesCharSize) * 100);
+			std::cout << round(PercentDone) << " percent done." << std::endl;
+		}
 
 		// Check if the encode has already been found in this function.
 		bool FoundAlready = false;
@@ -90,6 +103,14 @@ void Tokenizer::BuildEncodes(std::vector<std::string> Samples) {
 	TimeTaken = (EndTime - StartTime) / 1000000000;
 	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
 
+	// Sort The Encodings & Commonality Vectors.
+
+	std::cout << "Sorting The Encodes." << std::endl;
+
+	_SortEncodings();
+
+	std::cout << "Sorting Of Encodes Done." << std::endl;
+
 #ifdef _DEBUG
 	std::cout << "Doone Building Tokenizer On CPU." << std::endl;
 #endif // _DEBUG
@@ -126,7 +147,7 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 		vSamplesCharSize = vSamplesChar.size();
 		vSamplesChar.resize(vSamplesCharSize + Samples[i].size());
 		memcpy(&vSamplesChar[vSamplesCharSize], Samples[i].c_str(), sizeof(char) * Samples[i].size());
-		vSamplesChar.push_back((char)0);
+		vSamplesChar.push_back((char)32);
 	}
 
 	sycl::buffer<char> bSamplesChar(vSamplesChar);
@@ -169,7 +190,8 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 
 		// Report progress.
 		if ( i % ProgressReportInterval == 0) {
-			std::cout << (((double)i / vSamplesCharSize) * 100) << " percent done." << std::endl;
+			double PercentDone = (((double)i / vSamplesCharSize) * 100);
+			std::cout << round(PercentDone) << " percent done." << std::endl;
 		}
 
 		// creating a string for the byte pair.
@@ -280,44 +302,70 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	std::cout << "Time Taken: " << TimeTaken << " Seconds." << std::endl;
 
 
-#ifdef _DEBUG
-	for (uint64_t i = 0; i < Encodings.size(); i++) {
-		std::cout << Encodings[i] << "  " << Commonality[i] << std::endl;
-	}
+	// Sort The Encodings & Commonality Vectors.
 
+	std::cout << "Sorting The Encodes." << std::endl;
+
+	_SortEncodings();
+
+	std::cout << "Sorting Of Encodes Done." << std::endl;
+
+#ifdef _DEBUG
 	std::cout << "Finished building encodes on GPU." << std::endl;
 #endif // _DEBUG
 };
 
 // Encode Samples Functions.
 
-
-std::vector<int> Tokenizer::Encode(std::vector<std::string> Samples) {
+std::vector<std::vector<int>> Tokenizer::Encode(std::vector<std::string> Samples) {
 #ifdef _DEBUG
 	std::cout << "Encoding strings on CPU." << std::endl;
 #endif // _DEBUG
+	std::vector<std::vector<int>> vEncodedSamples(Samples.size());
+	bool EncodeFound = false;
 
-	std::vector<std::vector<char>> vSamplesChar;
-
+	// Iterate over each string.
 	for (uint64_t i = 0; i < Samples.size(); i++) {
-		std::vector<char> vSampleChar(Samples[i].size());
-		memcpy(vSampleChar.data(), &Samples[i], sizeof(char) * Samples.size());
-	}
+		// Ensure the string is of even length by padding the end.
+		if (Samples[i].length() % 2 != 0) {
+			Samples[i].push_back((char)32);
+		}
+		// Iterate over each byte pair in the string
+		for (uint64_t j = 0; j < Samples[i].size(); j += 2) {
+			EncodeFound = false;
 
+			// Iterate over each potential encode and check for match.
+			for (uint64_t k = 0; k < Encodings.size(); k++) {
+				// Check for match.
+				if (Encodings[k].c_str()[0] == Samples[i].c_str()[j] && Encodings[k].c_str()[1] == Samples[i].c_str()[j + 1]) {
+					vEncodedSamples[i].push_back(k);
+					EncodeFound = true;
+					break;
+				}
+			}
+			// If failed to find an encode we need to set a backup Val for not encodable.
+			if (!EncodeFound){ vEncodedSamples[i].push_back(-1); }
+		}
+	}
+#ifdef _DEBUG
+	std::cout << "Done Encoding Strings On CPU." << std::endl;
+#endif // _DEBUG
+	return vEncodedSamples;
 };
 
 
 // Decode Samples Functions.
-std::vector<std::string> Tokenizer::Decode(std::vector<int> Samples) {
+std::string Tokenizer::Decode(std::vector<int> Samples) {
 #ifdef _DEBUG
 	std::cout << "Decoding Integer Tokens To Strings (CPU)." << std::endl;
 #endif // _DEBUG
 
-	std::vector<std::string> DecodedSamples(Samples.size());
+	std::string DecodedSamples;
 
 	// Convert the encodings to strings.
 	for (size_t i = 0; i < Samples.size(); i++) {
-		if (Samples[i] != -1 && Samples[i] < MaxVocabSize) DecodedSamples[i] = Encodings[Samples[i]];
+		if (Samples[i] == -1) { DecodedSamples.append("<<Unknown Encode>>"); }
+		else { DecodedSamples.append(Encodings[Samples[i]]); }
 	}
 
 #ifdef _DEBUG
@@ -326,3 +374,38 @@ std::vector<std::string> Tokenizer::Decode(std::vector<int> Samples) {
 
 	return DecodedSamples;
 };
+
+
+// Sort Encodings Function.
+void Tokenizer::_SortEncodings() {
+#ifdef _DEBUG
+	std::cout << "Sorting Encodings & Commonality Vectors." << std::endl;
+#endif // _DEBUG
+
+	bool WholeVectorSorted = false;
+
+	while (!WholeVectorSorted) {
+		WholeVectorSorted = true;
+		// Iterate over every commonality.
+		for (uint64_t i = 0; i < Encodings.size() - 1; i++) {
+			// If the one closer to the front is smaller than the one next to it.
+			if (Commonalities[i] < Commonalities[i + 1]){
+
+				// Swap the commonalities.
+				int TmpCommonality = Commonalities[i];
+				Commonalities[i] = Commonalities[i + 1];
+				Commonalities[i + 1] = TmpCommonality;
+
+				// Swap the Encodes.
+				std::string TmpEncode = Encodings[i];
+				Encodings[i] = Encodings[i + 1];
+				Encodings[i + 1] = TmpEncode;
+				WholeVectorSorted = false;
+			}
+		}
+	}
+
+#ifdef _DEBUG
+	std::cout << "Encodings & Commonality Vectors Sorted." << std::endl;
+#endif // _DEBUG
+}
