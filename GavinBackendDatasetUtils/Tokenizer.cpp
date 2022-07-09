@@ -134,14 +134,13 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 
 	// Alert the user to device selection & other stuff.
 	std::cout << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
-
-	// Some code to figure out workgroup stuffs.
 	int MaxWorkGroupSize = q.get_device().get_info<sycl::info::device::max_work_group_size>();
 	std::cout << "Device Max workgroup size: " << MaxWorkGroupSize << std::endl;
+	uint64_t DeviceMemorySize = q.get_device().get_info<sycl::info::device::global_mem_size>();
+	std::cout << "Device Local Memory size: " << DeviceMemorySize << std::endl;
 
 	// Convert Samples to char array and add in EOL / NULL tokens at the end of each word.
 	std::vector<char> vSamplesChar;
-
 	uint64_t vSamplesCharSize = 0;
 	for (uint64_t i = 0; i < Samples.size(); i++) {
 		vSamplesCharSize = vSamplesChar.size();
@@ -158,12 +157,10 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	vSamplesCharSize = vSamplesChar.size();
 	uint64_t WGS = MaxWorkGroupSize;
 	uint64_t N_Range = 0;
-
 	while (N_Range * WGS < vSamplesCharSize) {
 		N_Range++;
 	}
 	N_Range = N_Range * WGS;
-
 	std::cout << "Work Group Size: " << WGS << std::endl;
 	std::cout << "Global Range: " << N_Range << std::endl;
 
@@ -172,10 +169,13 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 
 	// Setup a vector of found Encodes that have been found during the lifetime of this function.
 	std::vector<std::string> vFoundEncodes;
+	std::vector<uint64_t> vFoundEncodesIndices;
 
-	// Creating a Commonality Buffer to store how many occurences of that encode there are, it is sum reduced after stuff is done.
-	// Set to N_Range instead of the exact size of vSamplesChar to make sum reduction easier.
-	sycl::buffer<int> bWordCommonality(sycl::range<1> {N_Range});
+	// Value set to 1 if proposed encode is present at that point in the samples buffer. Sum reduced to another buffer.
+	sycl::buffer<int> bEncodePresent(sycl::range<1> {N_Range});
+
+	// Creating a buffer to store the reduced commonality values in. It is set to the max possible size it could ever be.
+	sycl::buffer<int> bEncodeCommonality(sycl::range<1> {vSamplesCharSize - 1});
 
 	// Specify a shader range.
 	sycl::range<1> ShaderRange{vSamplesChar.size() - 1};
@@ -189,7 +189,7 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	for (uint64_t i = 0; i < (vSamplesChar.size() - 1); i++) {
 
 		// Report progress.
-		if ( i % ProgressReportInterval == 0) {
+		if (i % ProgressReportInterval == 0) {
 			double PercentDone = (((double)i / vSamplesCharSize) * 100);
 			std::cout << round(PercentDone) << " percent done." << std::endl;
 		}
@@ -206,93 +206,91 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 		// If the encode has not been found already in this functions lifetime.
 		if (!FoundAlready) {
 
-			// Check if the Byte pair is an existing encode.
-			bool ExistingEncode = false;
-			uint64_t EncodeIndex;
-			for (uint64_t j = 0; j < Encodings.size(); j++) {
-				if (Encodings[j] == BytePair) { ExistingEncode = true; EncodeIndex = j; }
-			}
+			// Set it as found in the vectors and record its index.
+			vFoundEncodes.push_back(BytePair);
+			vFoundEncodesIndices.push_back(i);
 
-			// Creating Byte pair buffer on GPU.
-			sycl::buffer<char> bBytePair(BytePair);
+			// We need to wait for the GPU to finish using the aEncodePresent buffer from the previous launch before we can make it do anything else.
+			q.wait();
+
 
 			// Now we launch the GPU kernels to check for commonality.
 			auto CommonalityKernel = q.submit([&](sycl::handler& h) {
 
 				sycl::accessor aSamplesChar(bSamplesChar, h, sycl::read_only);
-				sycl::accessor aBytePair(bBytePair, h, sycl::read_only);
-				sycl::accessor aWordCommonality(bWordCommonality, h, sycl::write_only);
+				sycl::accessor aEncodePresent(bEncodePresent, h, sycl::write_only);
 
 				h.parallel_for(ShaderRange, [=](sycl::id<1> TID) {
 					int x = TID[0];
 
-					if (aBytePair[0] == aSamplesChar[x] && aBytePair[1] == aSamplesChar[x + 1]) {
-						aWordCommonality[x] = 1;
+					int SamplesCharEncodeIndex = i;
+
+					if (aSamplesChar[SamplesCharEncodeIndex] == aSamplesChar[x] && aSamplesChar[SamplesCharEncodeIndex + 1] == aSamplesChar[x + 1]) {
+						aEncodePresent[x] = 1;
 					}
-					else aWordCommonality[x] = 0;
+					else aEncodePresent[x] = 0;
 				});
 			});
-
-			//std::cout << "Commonality Found, Reduction Is Next." << std::endl;
-
 
 			// Now we do sum reduction on the commonality buffer to get a final value.
 			auto WorkGroupReduce = q.submit([&](sycl::handler& h) {
 				h.depends_on(CommonalityKernel);
 
-				sycl::accessor aWordCommonality(bWordCommonality, h, sycl::read_write);
+				sycl::accessor aEncodePresent(bEncodePresent, h, sycl::read_write);
 
 
-				// Global work group size of the length of the buffer, local workgroup size of 8.
 				h.parallel_for(sycl::nd_range<1>{N_Range, WGS}, [=](sycl::nd_item<1> TID) {
 					auto wg = TID.get_group();
 					auto i = TID.get_global_id(0);
 
-					int sum_wg = sycl::reduce_over_group(wg, aWordCommonality[i], sycl::plus<>());
+					int sum_wg = sycl::reduce_over_group(wg, aEncodePresent[i], sycl::plus<>());
 
-					if (TID.get_local_id(0) == 0) { aWordCommonality[i] = sum_wg; };
+					if (TID.get_local_id(0) == 0) { aEncodePresent[i] = sum_wg; };
 				});
 			});
-
-			// Create Commonality sum buffer.
-			sycl::buffer<int> bCommonalitySum(sycl::range<1>{1});
 
 			// Final stage of sum reduction.
 			q.submit([&](sycl::handler& h) {
 				// Depends on the previous kernel.
 				h.depends_on(WorkGroupReduce);
 
-				sycl::accessor aWordCommonality(bWordCommonality, h, sycl::read_write);
-				sycl::accessor aCommonalitySum(bCommonalitySum, h);
+				sycl::accessor aEncodePresent(bEncodePresent, h, sycl::read_write);
+				sycl::accessor aEncodeCommonality(bEncodeCommonality, h);
 
 				h.single_task([=]() {
 					int sum = 0;
-					// The 8 here is for the local workgroup size specified in the previous kernel.
-					for (int i = 0; i < aWordCommonality.get_count(); i += WGS) {
-						sum += aWordCommonality[i];
+					int CommonalityAccessIndex = i;
+					for (int i = 0; i < aEncodePresent.get_count(); i += WGS) {
+						sum += aEncodePresent[i];
 					}
-					aCommonalitySum[0] = sum;
+					aEncodeCommonality[CommonalityAccessIndex] = sum;
 				});
 			});
+		}
+	}
 
+	std::cout << "GPU kernels launched." << std::endl;
+	// Now we wait for the queue to finish and return the results to CPU.
+	q.wait();
 
-			// Wait for Q to finish.
-			q.wait();
+	std::cout << "GPU Kernels Finished." << std::endl;
 
-			// If the encoding is not already in the encodes vector
-			if (!ExistingEncode) {
-				//Push back the commonality and new unique byte pair encode.
-				Commonalities.push_back(bCommonalitySum.get_host_access()[0]);
-				Encodings.push_back(BytePair);
+	bool ExistingEncode = false;
+	// Now we iterate over found encodes retrieveing their commonality back from the GPU.
+	for (uint64_t i = 0; i < vFoundEncodes.size(); i++) {
+		ExistingEncode = false;
+		// Iterate over existing encodings vector to check if its already been found previously before this function run.
+		for (uint64_t j = 0; j < Encodings.size(); j++) {
+			if (Encodings[j] == vFoundEncodes[i]) {
+				Commonalities[j] += bEncodeCommonality.get_host_access()[vFoundEncodesIndices[i]];
+				ExistingEncode = true;
 			}
-			// If the encode is in the encodes vector.
-			else {
-				Commonalities[EncodeIndex] += bCommonalitySum.get_host_access()[0];
-			}
+		}
 
-			// Finally mark the Encode as found in the functions lifetime.
-			vFoundEncodes.push_back(BytePair);
-
+		// If it was not an existing encode then we append it to the encodes vector along with its commonality to the commonality vector.
+		if (!ExistingEncode) {
+			Commonalities.push_back(bEncodeCommonality.get_host_access()[vFoundEncodesIndices[i]]);
+			Encodings.push_back(vFoundEncodes[i]);
 		}
 	}
 
