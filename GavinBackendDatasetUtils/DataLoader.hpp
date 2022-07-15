@@ -20,6 +20,7 @@
 #include <tuple>
 #include <vector>
 #include <math.h>
+#include <execution>
 
 #include <CL/sycl.hpp>
 

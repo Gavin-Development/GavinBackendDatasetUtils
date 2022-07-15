@@ -1,5 +1,113 @@
 #include "DataLoader.hpp"
 
+// Multithreaded CPU bit
+void _GPU_Encode_Builder_CPU_Thread(std::mutex Mutex,
+	std::vector<char> *vSamplesChar,
+	sycl::buffer<char> *bSamplesChar,
+	sycl::buffer<int> *bEncodePresent,
+	sycl::buffer<uint64_t> *bEncodeCommonality,
+	std::vector<std::string> *vFoundEncodes,
+	std::vector<uint64_t> *vFoundEncodesIndices,
+	sycl::queue *q,
+	uint64_t N_Range,
+	uint64_t WGS,
+	uint64_t N_Workgroups,
+	uint64_t ThreadId,
+	uint64_t TotalThreads) {
+
+	// Determine the sections of vSamplesChar we are to iterate over on this CPU thread.
+	uint64_t StartIndex = (vSamplesChar->size() / TotalThreads) * ThreadId;
+	uint64_t EndIndex;
+	if (ThreadId == TotalThreads) EndIndex = vSamplesChar->size() - 1;
+	else EndIndex = StartIndex + (vSamplesChar->size() / TotalThreads);
+	uint64_t vSamplesCharSize = vSamplesChar->size();
+
+	for (uint64_t i = StartIndex; i < EndIndex; i++) {
+
+		// Create the byte pair string.
+		std::string BytePair{ vSamplesChar[0][i], vSamplesChar[0][i + 1] };
+
+		// check if the encode has been found already.
+		bool FoundAlready = false;
+		for (auto& Encode : *vFoundEncodes) {
+			if (Encode == BytePair) { FoundAlready = true; break; }
+		}
+
+		// If the proposed Encode is unique.
+		if (!FoundAlready) {
+			// Acquire the mutex. Loop untill acquired.
+			bool Locked = false;
+			while (!Locked) {
+				Locked = Mutex.try_lock();
+			}
+
+			// Set the encode as found in the vectors.
+			vFoundEncodes->push_back(BytePair);
+			vFoundEncodesIndices->push_back(i);
+
+			// Launch the GPU kernels.
+			auto CommonalityKernel = q[0].submit([&](sycl::handler& h) {
+
+				sycl::accessor aSamplesChar(*bSamplesChar, h, sycl::read_only);
+				sycl::accessor aEncodePresent(*bEncodePresent, h, sycl::write_only);
+
+				// Local memory array in each workgroup.
+				sycl::accessor<int, 1, sycl::access::mode::read_write, sycl::access::target::local> aLocal_Mem(sycl::range<1>(WGS), h);
+
+				h.parallel_for(sycl::nd_range<1>{N_Range, WGS}, [=](sycl::nd_item<1> TID) {
+					auto wg = TID.get_group();
+					auto x = TID.get_global_id(0);
+					auto localmemaccessindex = TID.get_local_id(0);
+
+					uint64_t SamplesCharEncodeIndex = i;
+
+					// If in range of the string buffer.
+					if (x < vSamplesCharSize - 1) {
+						if (aSamplesChar[SamplesCharEncodeIndex] == aSamplesChar[x] && aSamplesChar[SamplesCharEncodeIndex + 1] == aSamplesChar[x + 1]) {
+							aLocal_Mem[localmemaccessindex] = 1;
+						}
+						else aLocal_Mem[localmemaccessindex] = 0;
+					}
+					else aLocal_Mem[localmemaccessindex] = 0;
+
+					// synchronise all the kernels.
+					TID.barrier(sycl::access::fence_space::local_space);
+
+					// do a partial sum reduction from local memory into the device global memory (VRAM on a GPU).
+					int sum_wg = sycl::reduce_over_group(wg, aLocal_Mem[localmemaccessindex], sycl::plus<>());
+
+					if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
+
+					});
+				});
+
+			// Final stage of sum reduction.
+			q[0].submit([&](sycl::handler& h) {
+				// Depends on the previous kernel.
+				h.depends_on(CommonalityKernel);
+
+				sycl::accessor aEncodePresent(*bEncodePresent, h, sycl::read_write);
+				sycl::accessor aEncodeCommonality(*bEncodeCommonality, h, sycl::write_only);
+
+				h.single_task([=]() {
+					uint64_t sum = 0;
+					uint64_t CommonalityAccessIndex = i;
+					for (int j = 0; j < N_Workgroups; j++) {
+						sum += aEncodePresent[j];
+					}
+					aEncodeCommonality[CommonalityAccessIndex] = sum;
+					});
+				});
+
+			// Now we release the Mutex.
+			Mutex.unlock();
+		}
+
+	}
+
+}
+
+
 // Constructors.
 Tokenizer::Tokenizer(std::string iTokenizerName) {
 #ifdef _DEBUG
@@ -117,7 +225,7 @@ void Tokenizer::BuildEncodes(std::vector<std::string> Samples) {
 };
 
 
-// Needs re designing to take into account GPUs of various sizes.
+// Could do with re design to make use of multiple GPUs in system.
 void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 #ifdef _DEBUG
 	std::cout << "Building Tokenizer Encodes On GPU." << std::endl;
@@ -148,7 +256,6 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 		memcpy(&vSamplesChar[vSamplesCharSize], Samples[i].c_str(), sizeof(char) * Samples[i].size());
 		vSamplesChar.push_back((char)32);
 	}
-
 	sycl::buffer<char> bSamplesChar(vSamplesChar);
 
 	// Now we figure out the values for ND range kernels.
@@ -178,11 +285,21 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	// Creating a buffer to store the reduced commonality values in. It is set to the max possible size it could ever be.
 	sycl::buffer<uint64_t> bEncodeCommonality(sycl::range<1> {vSamplesCharSize - 1});
 
+	// Check that the device has enough memory for what we want to do.
+	if (bSamplesChar.byte_size() + bEncodePresent.byte_size() + bEncodeCommonality.byte_size() > DeviceMemorySize) {
+		std::cout << "Breaching device memory limitations, reduce the size of the corpus passed to this function." << std::endl;
+		return;
+	}
+
 #ifdef _DEBUG
 	std::cout << "Finished prepping long lived GPU buffers." << std::endl;
 #endif // _DEBUG
 
+	std::cout << "Launching GPU kernels." << std::endl;
 
+	bool FoundAlready;
+	std::string BytePair;
+	BytePair.resize(2);
 	// We iterate over EVERY Unique Byte pair in the sequence and determine the commonality of it.
 	for (uint64_t i = 0; i < (vSamplesChar.size() - 1); i++) {
 
@@ -193,12 +310,12 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 		}
 
 		// creating a string for the byte pair.
-		std::string BytePair{ vSamplesChar[i], vSamplesChar[i + 1] };
+		BytePair = { vSamplesChar[i], vSamplesChar[i + 1] };
 
 		// Check if the encode has already been found in this function.
-		bool FoundAlready = false;
+		FoundAlready = false;
 		for (auto& Encode : vFoundEncodes) {
-			if (Encode == BytePair) { FoundAlready = true; }
+			if (Encode == BytePair) { FoundAlready = true; break; }
 		}
 
 		// If the encode has not been found already in this functions lifetime.
@@ -207,10 +324,6 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 			// Set it as found in the vectors and record its index.
 			vFoundEncodes.push_back(BytePair);
 			vFoundEncodesIndices.push_back(i);
-
-			// We need to wait for the GPU to finish using the aEncodePresent buffer from the previous launch before we can make it do anything else.
-			//q.wait();
-
 
 			// Now we launch the GPU kernels to check for commonality.
 			auto CommonalityKernel = q.submit([&](sycl::handler& h) {
@@ -245,8 +358,8 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 
 					if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
 
+					});
 				});
-			});
 
 			// Final stage of sum reduction.
 			q.submit([&](sycl::handler& h) {
@@ -263,10 +376,10 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 						sum += aEncodePresent[j];
 					}
 					aEncodeCommonality[CommonalityAccessIndex] = sum;
+					});
 				});
-			});
 		}
-	}
+	}	
 
 	std::cout << "GPU kernels launched." << std::endl;
 	// Now we wait for the queue to finish and return the results to CPU.
@@ -406,3 +519,4 @@ void Tokenizer::_SortEncodings() {
 	std::cout << "Encodings & Commonality Vectors Sorted." << std::endl;
 #endif // _DEBUG
 }
+
