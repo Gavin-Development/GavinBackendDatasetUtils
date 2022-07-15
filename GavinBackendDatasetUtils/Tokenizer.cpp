@@ -157,10 +157,11 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	vSamplesCharSize = vSamplesChar.size();
 	uint64_t WGS = MaxWorkGroupSize;
 	uint64_t N_Range = 0;
-	while (N_Range * WGS < vSamplesCharSize) {
-		N_Range++;
+	uint64_t N_Workgroups = 0;
+	while (N_Workgroups * WGS < vSamplesCharSize) {
+		N_Workgroups++;
 	}
-	N_Range = N_Range * WGS;
+	N_Range = N_Workgroups * WGS;
 	std::cout << "Work Group Size: " << WGS << std::endl;
 	std::cout << "Global Range: " << N_Range << std::endl;
 
@@ -172,13 +173,10 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	std::vector<uint64_t> vFoundEncodesIndices;
 
 	// Value set to 1 if proposed encode is present at that point in the samples buffer. Sum reduced to another buffer.
-	sycl::buffer<int> bEncodePresent(sycl::range<1> {N_Range});
+	sycl::buffer<int> bEncodePresent(sycl::range<1> {N_Workgroups});
 
 	// Creating a buffer to store the reduced commonality values in. It is set to the max possible size it could ever be.
-	sycl::buffer<int> bEncodeCommonality(sycl::range<1> {vSamplesCharSize - 1});
-
-	// Specify a shader range.
-	sycl::range<1> ShaderRange{vSamplesChar.size() - 1};
+	sycl::buffer<uint64_t> bEncodeCommonality(sycl::range<1> {vSamplesCharSize - 1});
 
 #ifdef _DEBUG
 	std::cout << "Finished prepping long lived GPU buffers." << std::endl;
@@ -211,7 +209,7 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 			vFoundEncodesIndices.push_back(i);
 
 			// We need to wait for the GPU to finish using the aEncodePresent buffer from the previous launch before we can make it do anything else.
-			q.wait();
+			//q.wait();
 
 
 			// Now we launch the GPU kernels to check for commonality.
@@ -220,48 +218,49 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 				sycl::accessor aSamplesChar(bSamplesChar, h, sycl::read_only);
 				sycl::accessor aEncodePresent(bEncodePresent, h, sycl::write_only);
 
-				h.parallel_for(ShaderRange, [=](sycl::id<1> TID) {
-					int x = TID[0];
-
-					int SamplesCharEncodeIndex = i;
-
-					if (aSamplesChar[SamplesCharEncodeIndex] == aSamplesChar[x] && aSamplesChar[SamplesCharEncodeIndex + 1] == aSamplesChar[x + 1]) {
-						aEncodePresent[x] = 1;
-					}
-					else aEncodePresent[x] = 0;
-				});
-			});
-
-			// Now we do sum reduction on the commonality buffer to get a final value.
-			auto WorkGroupReduce = q.submit([&](sycl::handler& h) {
-				h.depends_on(CommonalityKernel);
-
-				sycl::accessor aEncodePresent(bEncodePresent, h, sycl::read_write);
-
+				// Local memory array in each workgroup.
+				sycl::accessor<int, 1, sycl::access::mode::read_write, sycl::access::target::local> aLocal_Mem(sycl::range<1>(WGS), h);
 
 				h.parallel_for(sycl::nd_range<1>{N_Range, WGS}, [=](sycl::nd_item<1> TID) {
 					auto wg = TID.get_group();
-					auto i = TID.get_global_id(0);
+					auto x = TID.get_global_id(0);
+					auto localmemaccessindex = TID.get_local_id(0);
 
-					int sum_wg = sycl::reduce_over_group(wg, aEncodePresent[i], sycl::plus<>());
+					uint64_t SamplesCharEncodeIndex = i;
 
-					if (TID.get_local_id(0) == 0) { aEncodePresent[i] = sum_wg; };
+					// If in range of the string buffer.
+					if (x < vSamplesCharSize - 1) {
+						if (aSamplesChar[SamplesCharEncodeIndex] == aSamplesChar[x] && aSamplesChar[SamplesCharEncodeIndex + 1] == aSamplesChar[x + 1]) {
+							aLocal_Mem[localmemaccessindex] = 1;
+						}
+						else aLocal_Mem[localmemaccessindex] = 0;
+					}
+					else aLocal_Mem[localmemaccessindex] = 0;
+
+					// synchronise all the kernels.
+					TID.barrier(sycl::access::fence_space::local_space);
+
+					// do a partial sum reduction from local memory into the device global memory (VRAM on a GPU).
+					int sum_wg = sycl::reduce_over_group(wg, aLocal_Mem[localmemaccessindex], sycl::plus<>());
+
+					if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
+
 				});
 			});
 
 			// Final stage of sum reduction.
 			q.submit([&](sycl::handler& h) {
 				// Depends on the previous kernel.
-				h.depends_on(WorkGroupReduce);
+				h.depends_on(CommonalityKernel);
 
 				sycl::accessor aEncodePresent(bEncodePresent, h, sycl::read_write);
-				sycl::accessor aEncodeCommonality(bEncodeCommonality, h);
+				sycl::accessor aEncodeCommonality(bEncodeCommonality, h, sycl::write_only);
 
 				h.single_task([=]() {
-					int sum = 0;
-					int CommonalityAccessIndex = i;
-					for (int i = 0; i < aEncodePresent.get_count(); i += WGS) {
-						sum += aEncodePresent[i];
+					uint64_t sum = 0;
+					uint64_t CommonalityAccessIndex = i;
+					for (int j = 0; j < N_Workgroups; j++) {
+						sum += aEncodePresent[j];
 					}
 					aEncodeCommonality[CommonalityAccessIndex] = sum;
 				});
@@ -390,7 +389,7 @@ void Tokenizer::_SortEncodings() {
 			if (Commonalities[i] < Commonalities[i + 1]){
 
 				// Swap the commonalities.
-				int TmpCommonality = Commonalities[i];
+				uint64_t TmpCommonality = Commonalities[i];
 				Commonalities[i] = Commonalities[i + 1];
 				Commonalities[i + 1] = TmpCommonality;
 
