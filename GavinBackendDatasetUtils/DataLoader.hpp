@@ -420,7 +420,12 @@ public:
     std::string Decode(std::vector<int> Samples); // Needs re write.
 
 private:
+    struct _Encode {
+        std::string Encode;
+        uint64_t Index;
 
+        _Encode(std::string str, uint64_t val) { Encode = str; Index = val; }
+    };
     // Sort the Encodings & Commonalities vectors to be in the order of descending commonality.
     void _SortEncodings();
 };
