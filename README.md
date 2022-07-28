@@ -35,7 +35,36 @@ Data_Slice = Samples.get_slice(0,2)
 This will get the first 2 samples from the BIN file and return them as a 2D array of size (slize_size, sample_length).
 
 
-**NOTE** Future support for creating and modifying BIN files with this class is coming soonish when i get on with implimenting it.
+**NOTE** Support for modifying BIN files with this class is a thing and samples are on their way soonish.
+
+### Tokenizer class
+This is to replace the TF BPE tokenizer, it is a very simple BPE algo tokenizer that is in its first stages of deployment and development, it can utilise both CPU & GPU to build the vocab with the ability to progressively build the vocab by batching the corpus.
+So far this class supports GPU accelerated encode building, CPU only for encode and decode of strings, support for unknown encodes, support for saving and loading Tokenizers from local path, some performance optimisations.
+
+**NOTE** This is class is still in its first iteration and may have bugs, just open an issue or DM me if it does not work.
+
+```
+GPUTokenizer = LTD.Tokenizer("Sus")
+
+GPUTokenizer.BuildEncodes_GPU(The_Bible)
+
+for i in range(0,10):
+	print(f"{GPUTokenizer.Words[i]}  {GPUTokenizer.Occurrences[i]}")
+
+GPUTokenizer.Save()
+```
+This sample creates a tokenizer called Sus and then builds the vocab on the GPU passing a list of words split by spaces as the corpus. Then it prints out the first 10 encodes and their associated commonalities, then saves the tokenizer to local dir.
+
+
+```
+ATokenizer = LTD.Tokenizer("Sus")
+
+ATokenizer.Load()
+
+for i in range(0,10):
+	print(f"{ATokenizer.Words[i]}  {ATokenizer.Occurrences[i]}")
+```
+This sample creates the Tokenizer class, then loads the file named "Sus.TOKENIZER" from the local dir then proceeds to print out the top 10 most common encodes.
 
 ### DOP functions
 This is the LoadTrainDataST() function:
@@ -90,6 +119,7 @@ This function will save training data sets authored in python into the BIN forma
 ## To Do
 * Add functionality to data streaming class to improve usability and performance while adding more functionality.
 * Investigate memory usage of ST impl to posibaly optimise & restructure code to eliminate un neccesary operations.
+* Create a directory containing samples to guide the use of the tools provided.
 
 ## Known issues
 - Generator is a bit slow at loading.

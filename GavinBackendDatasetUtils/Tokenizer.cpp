@@ -550,6 +550,7 @@ void Tokenizer::SaveTokenizer() {
 	EncodingsOffset = sizeof(uint64_t) * 5;
 	CommonalitiesOffset = EncodingsOffset + EncodingsLength;
 
+	// Write the offsets and lengths to the file.
 	File.write((const char*)&TotalFileSize, sizeof(uint64_t));
 	File.write((const char*)&EncodingsOffset, sizeof(uint64_t));
 	File.write((const char*)&EncodingsLength, sizeof(uint64_t));
@@ -571,15 +572,6 @@ void Tokenizer::SaveTokenizer() {
 #ifdef _DEBUG
 	std::cout << "Tokenizer Written To File." << std::endl;
 #endif // _DEBUG
-
-	// Debug stuff that is temporary.
-	std::cout << "Anticipated File Size: " << TotalFileSize << std::endl;
-	std::cout << "Anticipated File Name: " << FileName << std::endl;
-	std::cout << EncodingsOffset << std::endl;
-	std::cout << EncodingsLength << std::endl;
-	std::cout << CommonalitiesOffset << std::endl;
-	std::cout << CommonalitiesLength << std::endl;
-	std::cout << TotalFileSize << std::endl;
 }
 
 void Tokenizer::LoadTokenizer() {
@@ -588,7 +580,7 @@ void Tokenizer::LoadTokenizer() {
 #endif // _DEBUG
 
 	// Warn the programmer that they will be overwriting the tokenizer if it is already populated.
-	if (Encodings.size() > 0 || Commonalities.size() > 0) std::cout << "Warning, you are loading a tokenizer from disc to an already populated tokenizer, this will overwrite the tokenizer." << std::endl;
+	if (Encodings.size() > 0 || Commonalities.size() > 0) std::cout << "Warning, you are loading a tokenizer from disk to an already populated tokenizer, this will overwrite the tokenizer." << std::endl;
 
 	std::string FileName = "./" + TokenizerName + ".TOKENIZER";
 	// Create a file pointer so we can read in data from the file.
@@ -610,12 +602,14 @@ void Tokenizer::LoadTokenizer() {
 	Encodings.resize(EncodingsLength /  2);
 	Commonalities.resize(CommonalitiesLength / sizeof(uint64_t));
 
+	// Loading in the Encodes.
 	File.seekg(EncodingsOffset);
 	for (auto& Encode : Encodings) {
 		Encode.resize(2);
 		File.read((char*)Encode.data(), sizeof(char) * 2);
 	}
 
+	// Loading in the encode commonalities.
 	File.seekg(CommonalitiesOffset);
 	for (auto& Commonality : Commonalities) {
 		File.read((char*)&Commonality, sizeof(uint64_t));
@@ -624,11 +618,4 @@ void Tokenizer::LoadTokenizer() {
 #ifdef _DEBUG
 	std::cout << "Tokenizer values Loaded from dic." << std::endl;
 #endif // _DEBUG
-
-	std::cout << "Loaded tokenizer: " << FileName << std::endl;
-	std::cout << EncodingsOffset << std::endl;
-	std::cout << EncodingsLength << std::endl;
-	std::cout << CommonalitiesOffset << std::endl;
-	std::cout << CommonalitiesLength << std::endl;
-	std::cout << TotalFileSize << std::endl;
 }
