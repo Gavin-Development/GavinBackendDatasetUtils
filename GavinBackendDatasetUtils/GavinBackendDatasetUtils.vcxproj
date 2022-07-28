@@ -101,17 +101,12 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClInclude Include="base64.hpp" />
     <ClInclude Include="DataLoader.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="BINFile.cpp" />
-    <ClCompile Include="DataGenerator.cpp" />
-    <ClCompile Include="DataLoaderLegacySupport.cpp" />
     <ClCompile Include="DataLoaderMultiThread.cpp" />
     <ClCompile Include="DataLoaderSingleThread.cpp" />
-    <ClCompile Include="DataSetConversions.cpp" />
-    <ClCompile Include="DatasetCreator.cpp" />
     <ClCompile Include="PythonFuncsDefinitions.cpp" />
     <ClCompile Include="Tokenizer.cpp" />
   </ItemGroup>

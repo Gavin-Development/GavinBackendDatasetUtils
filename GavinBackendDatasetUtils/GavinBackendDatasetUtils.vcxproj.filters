@@ -15,25 +15,13 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="DataLoaderLegacySupport.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="DataLoaderMultiThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="DataLoaderSingleThread.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="DataSetConversions.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="PythonFuncsDefinitions.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DataGenerator.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="DatasetCreator.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="Tokenizer.cpp">
@@ -45,9 +33,6 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DataLoader.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="base64.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

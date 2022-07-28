@@ -7,7 +7,7 @@ This tool set is a WIP suite of tools for authoring, managing & loading datasets
 
 ## Usage
 
-### New File Format
+### BIN File Format
 The default dataset / file format is .BIN, it is designed to be highly compressable and efficient to load. The format is mostly complete but additions and tweaks are still being made.
 
 |Section|What it is|Length|
@@ -35,7 +35,7 @@ Data_Slice = Samples.get_slice(0,2)
 This will get the first 2 samples from the BIN file and return them as a 2D array of size (slize_size, sample_length).
 
 
-**NOTE** Support for modifying BIN files with this class is a thing and samples are on their way soonish.
+**NOTE** Support for modifying BIN files with this class is a thing and code samples are on their way soonish.
 
 ### Tokenizer class
 This is to replace the TF BPE tokenizer, it is a very simple BPE algo tokenizer that is in its first stages of deployment and development, it can utilise both CPU & GPU to build the vocab with the ability to progressively build the vocab by batching the corpus.
@@ -88,39 +88,15 @@ LTD.ConvertDataSet_TEST(10_000_000,"C:/Users/user/Desktop/Gavin/GavinTraining/To
 This function will load up the Tokenizer-3.from file, load it and transcode it to BIN format and save it to 10_MILLION.BIN, it will load the first 10 million samples.
 It has minimal optimisation as its only meant to be a temporary measure for compatibility as we transition to BIN format.
 
-### Generator
-The data generator. It isnt blazing fast (yet) but it will do the trick where system RAM is a limiting factor for loading the dataset. It has 2 arrays exposed to the user (ToSampleBuffer, FromSampleBuffer), it has initialisation and buffer update methods exposed aswell.
-
-```python
-Generator = LTD.DataGenerator("./", "To_Samples.BIN", "From_Samples.BIN", 100_000, 69108, 66109, 52, 0)
-```
-This will create the Generator and all its associated memory objects, open file pointers to the question samples (To_Samples.BIN) and the answer samples (From_Samples.BIN). The rest of the parameters mirror that of LoadTrainDataST().
-
-```python
-Generator.UpdateBuffer()
-```
-This will read the next *100_000* samples from each of the files and load them up into the respective buffers.
-
-**NOTE** This is being depreciated and succeeded by the BINFile class.
-
-### Old File Format
-Currently there is good support for the OG file format (pickled by python) with functions to load it and convert it to a new .BIN format.
-
-This is the LoadTrainDataST() function:
-```python
-samples = LTD.LoadTrainDataST_Legacy(10000000, "C:/Users/User/Desktop/Gavin/GavinTraining/", "Tokenizer-3.to", 69108,66109, 52, 0)
-```
-This will load 10,000,000 samples from the specified file in the specified directory. It will add start token 69108 and end token 66109 and pad each sample to length 52 with 0s.
-
-## Work in progress functions
-#### SaveTrainData()
-This function will save training data sets authored in python into the BIN format for later ingest by the training script.
+## Progress / Roadmap
 
 ## To Do
 * Add functionality to data streaming class to improve usability and performance while adding more functionality.
-* Investigate memory usage of ST impl to posibaly optimise & restructure code to eliminate un neccesary operations.
 * Create a directory containing samples to guide the use of the tools provided.
+* Optimise Tokenizer class loading and saving functions for potentially better performance.
+* Optimise GPU kernel dispatcher for GPU accelerated Vocab building.
+* Optimise BINFile class where possible to improve performance.
+* Usability pass on BINFile class and Tokenizer class.
 
 ## Known issues
-- Generator is a bit slow at loading.
-- Generator is not 100% compatible with tensorflow and the way it does things.
+None

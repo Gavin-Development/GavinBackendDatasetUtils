@@ -16,7 +16,6 @@
 #include <cstdlib>
 #include <stdexcept>
 #include <chrono>
-#include <mutex>
 #include <tuple>
 #include <vector>
 #include <math.h>
@@ -294,16 +293,11 @@ public:
 
 namespace py = pybind11;
 
-// Legacy
-
-std::vector<py::list> LoadTrainDataST_Legacy(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
-
 //future
 
 py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 
-void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::string fileToSave);
 
 
 namespace BIN {
@@ -317,39 +311,9 @@ namespace BIN {
 
         //SampleHeaderData(int a, int b, int c) : OffsetFromDataSectionStart(a), SampleLength(b), dtypeint16(c) {};
 	};
-
-    
-
 };
 
-class DataGenerator {
-public:
-    std::ifstream ToFile, FromFile;
-    BIN::SampleHeaderData* ToFileHeaderData, *FromFileHeaderData;
 
-    uint64_t NumberOfSamplesInFile, ToFileLength, FromFileLength, BufferSize, FileHeaderLength, CurrentSampleNumber;
-    int* ToSampleBuffer,* FromSampleBuffer;
-    int startToken, endToken, sampleLength, paddingValue;
-
-    py::capsule ToSampleBufferCapsule, FromSampleBufferCapsule;
-    py::array_t<int> ToSampleBufferArray_t, FromSampleBufferArray_t;
-
-
-    DataGenerator(std::string dataPath, std::string tokenizertoName, std::string tokenizerfromName, uint64_t iBufferSize, int istartToken, int iendToken, int isampleLength, int ipaddingValue);
-    ~DataGenerator();
-
-    void UpdateDataBuffer();
-
-private:
-
-    int* Buffer_int32;
-    uint24_t* Buffer_int24;
-    uint16_t* Buffer_int16;
-
-    inline void ReadSampleFromFile(std::ifstream* File, BIN::SampleHeaderData HeaderData, int* BufferToLoadTo);
-    inline void ReadRequiredHeadersFromFile(std::ifstream* File, BIN::SampleHeaderData* HeaderData);
-
-};
 
 class BINFile {
 public:
