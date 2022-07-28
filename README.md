@@ -23,7 +23,10 @@ The default dataset / file format is .BIN, it is designed to be highly compressa
 This is to replace the generator and enable extended functionality such as array syntax overloading, array slicing and full memory management for loaded data. This object can be treated very much like an array but the data backing it is actually stored on disk and streamed in and decompressed upon user request for data. Current version only has full support for reading existing files with full operator overloading and slicing capabilities via the `get_slice(Start, End)` method.
 
 **NOTE** This is the preferred method for reading from BIN files now as all other methods are now not being updated and should be considered depreciated.
+
 **NOTE** Support for modifying BIN files with this class is a thing and code samples are on their way soonish.
+
+Please check BINFile_Samples.md in /Samples to see usage.
 
 ### Tokenizer class
 This is to replace the TF BPE tokenizer, it is a very simple BPE algo tokenizer that is in its first stages of deployment and development, it can utilise both CPU & GPU to build the vocab with the ability to progressively build the vocab by batching the corpus.
