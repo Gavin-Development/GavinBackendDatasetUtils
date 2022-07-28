@@ -21,20 +21,6 @@ The default dataset / file format is .BIN, it is designed to be highly compressa
 This is to replace the generator and enable extended functionality such as array syntax overloading, array slicing and full memory management for loaded data. This object can be treated very much like an array but the data backing it is actually stored on disk and streamed in and decompressed upon user request for data. Current version only has full support for reading existing files with full operator overloading and slicing capabilities via the `get_slice(Start, End)` method.
 
 **NOTE** This is the preferred method for reading from BIN files now as all other methods are now not being updated and should be considered depreciated.
-
-```
-Samples = LTD.BINFile("Tokenizer-3-to.BIN",69,420,50,0)
-
-Sample = Samples[0]
-```
-This will setup the BINFile class and point it to a file with start token set to 69, end token to 420, desired sample length set to 50, and padding val set to 0. As can be seen in the code snippet it supports array index operator overloading to stream in from the disk.
-
-```
-Data_Slice = Samples.get_slice(0,2)
-```
-This will get the first 2 samples from the BIN file and return them as a 2D array of size (slize_size, sample_length).
-
-
 **NOTE** Support for modifying BIN files with this class is a thing and code samples are on their way soonish.
 
 ### Tokenizer class
@@ -43,28 +29,7 @@ So far this class supports GPU accelerated encode building, CPU only for encode 
 
 **NOTE** This is class is still in its first iteration and may have bugs, just open an issue or DM me if it does not work.
 
-```
-GPUTokenizer = LTD.Tokenizer("Sus")
-
-GPUTokenizer.BuildEncodes_GPU(The_Bible)
-
-for i in range(0,10):
-	print(f"{GPUTokenizer.Words[i]}  {GPUTokenizer.Occurrences[i]}")
-
-GPUTokenizer.Save()
-```
-This sample creates a tokenizer called Sus and then builds the vocab on the GPU passing a list of words split by spaces as the corpus. Then it prints out the first 10 encodes and their associated commonalities, then saves the tokenizer to local dir.
-
-
-```
-ATokenizer = LTD.Tokenizer("Sus")
-
-ATokenizer.Load()
-
-for i in range(0,10):
-	print(f"{ATokenizer.Words[i]}  {ATokenizer.Occurrences[i]}")
-```
-This sample creates the Tokenizer class, then loads the file named "Sus.TOKENIZER" from the local dir then proceeds to print out the top 10 most common encodes.
+Please check Tokenizer_Samples.md in /Samples to see usage.
 
 ### DOP functions
 This is the LoadTrainDataST() function:
