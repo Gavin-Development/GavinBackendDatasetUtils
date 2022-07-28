@@ -20,7 +20,6 @@
 #include <tuple>
 #include <vector>
 #include <math.h>
-#include <execution>
 
 #include <CL/sycl.hpp>
 
@@ -418,6 +417,12 @@ public:
 
     // Decode Strings Functions
     std::string Decode(std::vector<int> Samples); // Needs re write.
+    
+    // Tokenizer load and save functions.
+
+    void SaveTokenizer();
+
+    void LoadTokenizer();
 
 private:
     struct _Encode {
@@ -428,4 +433,6 @@ private:
     };
     // Sort the Encodings & Commonalities vectors to be in the order of descending commonality.
     void _SortEncodings();
+
+
 };

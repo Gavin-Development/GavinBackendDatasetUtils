@@ -27,6 +27,8 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
 
         .def_readonly("Words", &Tokenizer::Encodings)
         .def_readonly("Occurrences", &Tokenizer::Commonalities)
+        .def("Save", &Tokenizer::SaveTokenizer)
+        .def("Load", &Tokenizer::LoadTokenizer)
         .def("Encode", &Tokenizer::Encode)
         .def("GetVocabSize", &Tokenizer::GetVocabSize)
         .def("Decode", &Tokenizer::Decode)

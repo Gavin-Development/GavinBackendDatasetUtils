@@ -158,7 +158,9 @@ void Tokenizer::BuildEncodes(std::vector<std::string> Samples) {
 	// We iterate over EVERY unique byte pair in the sequence and determine the commonality of it.
 	for (uint64_t i = 0; i < (vSamplesChar.size() - 1); i++) {
 		// Setup the byte pair string to make syntax easier for comparisons.
-		std::string BytePair{ vSamplesChar[i], vSamplesChar[i + 1] };
+		std::string BytePair;
+		BytePair.resize(2);
+		BytePair = { vSamplesChar[i], vSamplesChar[i + 1] };
 
 		// Report progress.
 		if (i % ProgressReportInterval == 0) {
@@ -300,6 +302,7 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	bool FoundAlready;
 	std::string BytePair;
 	BytePair.resize(2);
+	BytePair.reserve(2);
 	// We iterate over EVERY Unique Byte pair in the sequence and determine the commonality of it.
 	for (uint64_t i = 0; i < (vSamplesChar.size() - 1); i++) {
 
@@ -520,3 +523,112 @@ void Tokenizer::_SortEncodings() {
 #endif // _DEBUG
 }
 
+// Tokenizer load and save functions.
+
+void Tokenizer::SaveTokenizer() {
+#ifdef _DEBUG
+	std::cout << "Saving Tokenizer to disc." << std::endl;
+#endif // _DEBUG
+
+	// First we need to perform some checks to ensure that the tokenizer is actually able to be saved to the disc properly and that it is worth saving it.
+
+	if (TokenizerName.size() <= 0 || Encodings.size() <= 0 && Commonalities.size() != Encodings.size()) {
+		std::cout << "Tokenizer is unable to be saved, it is either un named, or does not contain any encodes." << std::endl;
+		return;
+	}
+
+	std::string FileName = "./" + TokenizerName + ".TOKENIZER";
+
+	// Now we open a file pointer to the local director on disc.
+	std::fstream File(FileName, std::ios::binary | std::ios::out);
+
+	// We need to store the total file length, the length of the commonalities section, the length of the encodings section and an offset for each of them.
+	uint64_t TotalFileSize, CommonalitiesLength, EncodingsLength, CommonalitiesOffset, EncodingsOffset;
+	CommonalitiesLength = (Commonalities.size() * sizeof(uint64_t));
+	EncodingsLength = (Encodings.size() * 2);
+	TotalFileSize = EncodingsLength + CommonalitiesLength + (sizeof(uint64_t) * 5);
+	EncodingsOffset = sizeof(uint64_t) * 5;
+	CommonalitiesOffset = EncodingsOffset + EncodingsLength;
+
+	File.write((const char*)&TotalFileSize, sizeof(uint64_t));
+	File.write((const char*)&EncodingsOffset, sizeof(uint64_t));
+	File.write((const char*)&EncodingsLength, sizeof(uint64_t));
+	File.write((const char*)&CommonalitiesOffset, sizeof(uint64_t));
+	File.write((const char*)&CommonalitiesLength, sizeof(uint64_t));
+
+	// Write the encodings vector to the file.
+	for (auto& Encode : Encodings) {
+		File.write((const char*)Encode.c_str(), sizeof(char) * 2);
+	}
+
+	// Write the commonalities vector to the file.
+	for (auto& Commonality : Commonalities) {
+		File.write((const char*)&Commonality, sizeof(uint64_t));
+	}
+
+	File.close();
+
+#ifdef _DEBUG
+	std::cout << "Tokenizer Written To File." << std::endl;
+#endif // _DEBUG
+
+	// Debug stuff that is temporary.
+	std::cout << "Anticipated File Size: " << TotalFileSize << std::endl;
+	std::cout << "Anticipated File Name: " << FileName << std::endl;
+	std::cout << EncodingsOffset << std::endl;
+	std::cout << EncodingsLength << std::endl;
+	std::cout << CommonalitiesOffset << std::endl;
+	std::cout << CommonalitiesLength << std::endl;
+	std::cout << TotalFileSize << std::endl;
+}
+
+void Tokenizer::LoadTokenizer() {
+#ifdef _DEBUG
+	std::cout << "Loading Tokenizer from disc." << std::endl;
+#endif // _DEBUG
+
+	// Warn the programmer that they will be overwriting the tokenizer if it is already populated.
+	if (Encodings.size() > 0 || Commonalities.size() > 0) std::cout << "Warning, you are loading a tokenizer from disc to an already populated tokenizer, this will overwrite the tokenizer." << std::endl;
+
+	std::string FileName = "./" + TokenizerName + ".TOKENIZER";
+	// Create a file pointer so we can read in data from the file.
+	std::ifstream File(FileName, std::ios::binary | std::ios::in);
+
+	uint64_t TotalFileSize, CommonalitiesLength, EncodingsLength, CommonalitiesOffset, EncodingsOffset;
+
+	// Seek to the beginning of the file to load in data.
+	File.seekg(0);
+
+	File.read((char*)&TotalFileSize, sizeof(uint64_t));
+	File.read((char*)&EncodingsOffset, sizeof(uint64_t));
+	File.read((char*)&EncodingsLength, sizeof(uint64_t));
+	File.read((char*)&CommonalitiesOffset, sizeof(uint64_t));
+	File.read((char*)&CommonalitiesLength, sizeof(uint64_t));
+
+	// Load in the actual data now.
+
+	Encodings.resize(EncodingsLength /  2);
+	Commonalities.resize(CommonalitiesLength / sizeof(uint64_t));
+
+	File.seekg(EncodingsOffset);
+	for (auto& Encode : Encodings) {
+		Encode.resize(2);
+		File.read((char*)Encode.data(), sizeof(char) * 2);
+	}
+
+	File.seekg(CommonalitiesOffset);
+	for (auto& Commonality : Commonalities) {
+		File.read((char*)&Commonality, sizeof(uint64_t));
+	}
+
+#ifdef _DEBUG
+	std::cout << "Tokenizer values Loaded from dic." << std::endl;
+#endif // _DEBUG
+
+	std::cout << "Loaded tokenizer: " << FileName << std::endl;
+	std::cout << EncodingsOffset << std::endl;
+	std::cout << EncodingsLength << std::endl;
+	std::cout << CommonalitiesOffset << std::endl;
+	std::cout << CommonalitiesLength << std::endl;
+	std::cout << TotalFileSize << std::endl;
+}
