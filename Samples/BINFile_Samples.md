@@ -4,7 +4,7 @@ This README contains info on examples of how to use the module.
 
 ## BINFile class
 
-#Innit
+# Innit
 ```
 import GavinBackendDatasetUtils as LTD
 
@@ -13,14 +13,14 @@ Samples = LTD.BINFile("TestFile.BIN", 69, 420, 50, 0)
 This sample opens a BIN file called TestFile in the local script directory and specified to use the start token 69 and end token 420 with sample length of 50 and padding val of 0 for reading samples.
 
 
-#BINFile stats
+# BINFile stats
 ```
 print(Samples.MaxNumberOfSamples)
 print(Samples.NumberOfSamples)
 ``` 
 This code sample prints out the max size the BIN file can be and the number of samples in the BIN file currently.
 
-#Reading from BINFile
+# Reading from BINFile
 ```
 A_Sample = Samples[0]
 ```
