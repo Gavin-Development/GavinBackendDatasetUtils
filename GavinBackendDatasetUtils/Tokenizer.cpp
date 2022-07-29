@@ -1,130 +1,41 @@
 #include "DataLoader.hpp"
 
-// Multithreaded CPU bit
-void _GPU_Encode_Builder_CPU_Thread(std::mutex Mutex,
-	std::vector<char> *vSamplesChar,
-	sycl::buffer<char> *bSamplesChar,
-	sycl::buffer<int> *bEncodePresent,
-	sycl::buffer<uint64_t> *bEncodeCommonality,
-	std::vector<std::string> *vFoundEncodes,
-	std::vector<uint64_t> *vFoundEncodesIndices,
-	sycl::queue *q,
-	uint64_t N_Range,
-	uint64_t WGS,
-	uint64_t N_Workgroups,
-	uint64_t ThreadId,
-	uint64_t TotalThreads) {
-
-	// Determine the sections of vSamplesChar we are to iterate over on this CPU thread.
-	uint64_t StartIndex = (vSamplesChar->size() / TotalThreads) * ThreadId;
-	uint64_t EndIndex;
-	if (ThreadId == TotalThreads) EndIndex = vSamplesChar->size() - 1;
-	else EndIndex = StartIndex + (vSamplesChar->size() / TotalThreads);
-	uint64_t vSamplesCharSize = vSamplesChar->size();
-
-	for (uint64_t i = StartIndex; i < EndIndex; i++) {
-
-		// Create the byte pair string.
-		std::string BytePair{ vSamplesChar[0][i], vSamplesChar[0][i + 1] };
-
-		// check if the encode has been found already.
-		bool FoundAlready = false;
-		for (auto& Encode : *vFoundEncodes) {
-			if (Encode == BytePair) { FoundAlready = true; break; }
-		}
-
-		// If the proposed Encode is unique.
-		if (!FoundAlready) {
-			// Acquire the mutex. Loop untill acquired.
-			bool Locked = false;
-			while (!Locked) {
-				Locked = Mutex.try_lock();
-			}
-
-			// Set the encode as found in the vectors.
-			vFoundEncodes->push_back(BytePair);
-			vFoundEncodesIndices->push_back(i);
-
-			// Launch the GPU kernels.
-			auto CommonalityKernel = q[0].submit([&](sycl::handler& h) {
-
-				sycl::accessor aSamplesChar(*bSamplesChar, h, sycl::read_only);
-				sycl::accessor aEncodePresent(*bEncodePresent, h, sycl::write_only);
-
-				// Local memory array in each workgroup.
-				sycl::accessor<int, 1, sycl::access::mode::read_write, sycl::access::target::local> aLocal_Mem(sycl::range<1>(WGS), h);
-
-				h.parallel_for(sycl::nd_range<1>{N_Range, WGS}, [=](sycl::nd_item<1> TID) {
-					auto wg = TID.get_group();
-					auto x = TID.get_global_id(0);
-					auto localmemaccessindex = TID.get_local_id(0);
-
-					uint64_t SamplesCharEncodeIndex = i;
-
-					// If in range of the string buffer.
-					if (x < vSamplesCharSize - 1) {
-						if (aSamplesChar[SamplesCharEncodeIndex] == aSamplesChar[x] && aSamplesChar[SamplesCharEncodeIndex + 1] == aSamplesChar[x + 1]) {
-							aLocal_Mem[localmemaccessindex] = 1;
-						}
-						else aLocal_Mem[localmemaccessindex] = 0;
-					}
-					else aLocal_Mem[localmemaccessindex] = 0;
-
-					// synchronise all the kernels.
-					TID.barrier(sycl::access::fence_space::local_space);
-
-					// do a partial sum reduction from local memory into the device global memory (VRAM on a GPU).
-					int sum_wg = sycl::reduce_over_group(wg, aLocal_Mem[localmemaccessindex], sycl::plus<>());
-
-					if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
-
-					});
-				});
-
-			// Final stage of sum reduction.
-			q[0].submit([&](sycl::handler& h) {
-				// Depends on the previous kernel.
-				h.depends_on(CommonalityKernel);
-
-				sycl::accessor aEncodePresent(*bEncodePresent, h, sycl::read_write);
-				sycl::accessor aEncodeCommonality(*bEncodeCommonality, h, sycl::write_only);
-
-				h.single_task([=]() {
-					uint64_t sum = 0;
-					uint64_t CommonalityAccessIndex = i;
-					for (int j = 0; j < N_Workgroups; j++) {
-						sum += aEncodePresent[j];
-					}
-					aEncodeCommonality[CommonalityAccessIndex] = sum;
-					});
-				});
-
-			// Now we release the Mutex.
-			Mutex.unlock();
-		}
-
-	}
-
-}
-
-
 // Constructors.
 Tokenizer::Tokenizer(std::string iTokenizerName) {
 #ifdef _DEBUG
-	std::cout << "Initialising a new tokenizer." << std::endl;
+	std::cout << "Initialising a new tokenizer and loading data from disk." << std::endl;
 #endif // _DEBUG
 
 	// Set up some Tokenizer variables.
 	TokenizerName = iTokenizerName;
 
+	if (TokenizerName.size() <= 0) std::cout << "Invalid tokenizer name." << std::endl; throw std::runtime_error("Invalid tokenizer name.");
+
 	Encodings.resize(0);
 	Commonalities.resize(0);
+
+	if (!_LoadTokenizer()) { std::cout << "Unable to load tokenizer from on disk." << std::endl; throw std::runtime_error("No Tokenizer found on disk."); }
+	else std::cout << "Tokenizer successfully loaded from disk." << std::endl;
 
 #ifdef _DEBUG
 	std::cout << "Initialisation Done." << std::endl;
 #endif // _DEBUG
+}
 
-};
+Tokenizer::Tokenizer() {
+#ifdef _DEBUG
+	std::cout << "Initialising a new nameless tokenizer." << std::endl;
+#endif // _DEBUG
+
+	// Set some values.
+	Encodings.resize(0);
+	Commonalities.resize(0);
+	TokenizerName.resize(0);
+
+#ifdef _DEBUG
+	std::cout << "Initialisation Done." << std::endl;
+#endif // _DEBUG
+}
 
 // Build Encodes Functions.
 void Tokenizer::BuildEncodes(std::vector<std::string> Samples) {
@@ -525,22 +436,18 @@ void Tokenizer::_SortEncodings() {
 
 // Tokenizer load and save functions.
 
-void Tokenizer::SaveTokenizer() {
+bool Tokenizer::_SaveTokenizer() {
 #ifdef _DEBUG
 	std::cout << "Saving Tokenizer to disc." << std::endl;
 #endif // _DEBUG
-
-	// First we need to perform some checks to ensure that the tokenizer is actually able to be saved to the disc properly and that it is worth saving it.
-
-	if (TokenizerName.size() <= 0 || Encodings.size() <= 0 && Commonalities.size() != Encodings.size()) {
-		std::cout << "Tokenizer is unable to be saved, it is either un named, or does not contain any encodes." << std::endl;
-		return;
-	}
 
 	std::string FileName = "./" + TokenizerName + ".TOKENIZER";
 
 	// Now we open a file pointer to the local director on disc.
 	std::fstream File(FileName, std::ios::binary | std::ios::out);
+
+	// Check if the file was opened correctly, if not return false to the calling function.
+	if (!File.is_open()) std::cout << "Failed to create file on disk." << std::endl; return false;
 
 	// We need to store the total file length, the length of the commonalities section, the length of the encodings section and an offset for each of them.
 	uint64_t TotalFileSize, CommonalitiesLength, EncodingsLength, CommonalitiesOffset, EncodingsOffset;
@@ -572,19 +479,21 @@ void Tokenizer::SaveTokenizer() {
 #ifdef _DEBUG
 	std::cout << "Tokenizer Written To File." << std::endl;
 #endif // _DEBUG
+
+	return true;
 }
 
-void Tokenizer::LoadTokenizer() {
+bool Tokenizer::_LoadTokenizer() {
 #ifdef _DEBUG
 	std::cout << "Loading Tokenizer from disc." << std::endl;
 #endif // _DEBUG
 
-	// Warn the programmer that they will be overwriting the tokenizer if it is already populated.
-	if (Encodings.size() > 0 || Commonalities.size() > 0) std::cout << "Warning, you are loading a tokenizer from disk to an already populated tokenizer, this will overwrite the tokenizer." << std::endl;
-
 	std::string FileName = "./" + TokenizerName + ".TOKENIZER";
 	// Create a file pointer so we can read in data from the file.
 	std::ifstream File(FileName, std::ios::binary | std::ios::in);
+
+	// check if the file opened correctlym, if not return false to the calling function.
+	if (!File.is_open()) std::cout << "Failed to open file on disk." << std::endl; return false;
 
 	uint64_t TotalFileSize, CommonalitiesLength, EncodingsLength, CommonalitiesOffset, EncodingsOffset;
 
@@ -618,4 +527,95 @@ void Tokenizer::LoadTokenizer() {
 #ifdef _DEBUG
 	std::cout << "Tokenizer values Loaded from dic." << std::endl;
 #endif // _DEBUG
+
+	return true;
+}
+
+bool Tokenizer::SaveTokenizer() {
+#ifdef _DEBUG
+	std::cout << "Python exposed save Tokenizer function called." << std::endl;
+#endif // _DEBUG
+
+	// First we need to perform some checks to ensure that the tokenizer can be saved to disk.
+
+	if (Encodings.size() <= 0 && Commonalities.size() != Encodings.size()) std::cout << "Tokenizer can not be saved, contains no enodes." << std::endl; return false;
+
+	if (TokenizerName.size() <= 0) std::cout << "No tokenizer name specified." << std::endl; return false;
+
+
+	// Now we attempt to save the tokenizer to disk.
+	if (!_SaveTokenizer()) std::cout << "An error occured while trying to save tokenizer." << std::endl; return false;
+
+#ifdef _DEBUG
+	std::cout << "Python exposed tokenizer save function complete." << std::endl;
+#endif // _DEBUG
+
+	return true;
+}
+
+bool Tokenizer::SaveTokenizer(std::string iTokenizerName) {
+#ifdef _DEBUG
+	std::cout << "Python exposed save tokenizer function with name override called." << std::endl;
+#endif // _DEBUG
+
+	// Set the tokenizer name.
+	TokenizerName = iTokenizerName;
+
+	// perform some checks to ensure that the tokenizer can actually be saved.
+	if (Encodings.size() <= 0 && Commonalities.size() != Encodings.size()) std::cout << "Tokenizer can not be saved, contains no enodes." << std::endl; return false;
+
+	if (TokenizerName.size() <= 0) std::cout << "Invalid tokenizer name specified." << std::endl; return false;
+
+	// Now we attempt to save the tokenizer to disk.
+	if (!_SaveTokenizer()) std::cout << "An error occured while trying to save tokenizer." << std::endl; return false;
+
+#ifdef _DEBUG
+	std::cout << "Python exposed tokenizer save function complete." << std::endl;
+#endif // _DEBUG
+
+	return true;
+}
+
+bool Tokenizer::LoadTokenizer() {
+#ifdef _DEBUG
+	std::cout << "Python function to load Tokenizer from disk called." << std::endl;
+#endif // _DEBUG
+
+	// Warn the programmer that they will be overwriting the tokenizer if it is already populated.
+	if (Encodings.size() > 0 || Commonalities.size() > 0) std::cout << "Warning, you are loading a tokenizer from disk to an already populated tokenizer, this will overwrite the tokenizer." << std::endl; return false;
+
+	if (TokenizerName.size() <= 0) std::cout << "Un named tokenizer, please pass a name for the tokenizer you wish to load." << std::endl; return false;
+
+	// Now we attempt to load the tokenizer from disk.
+	if (!_LoadTokenizer()) std::cout << "An error occured while trying to load tokenizer." << std::endl; return false;
+
+
+#ifdef _DEBUG
+	std::cout << "Python function to load Tokenizer from disk finished." << std::endl;
+#endif // _DEBUG
+
+	return true;
+}
+
+bool Tokenizer::LoadTokenizer(std::string iTokenizerName) {
+#ifdef _DEBUG
+	std::cout << "Python exposed load tokenizer function with name override called." << std::endl;
+#endif // _DEBUG
+
+	// Warn the programmer that they will be overwriting the tokenizer if it is already populated.
+	if (Encodings.size() > 0 || Commonalities.size() > 0) std::cout << "Warning, you are loading a tokenizer from disk to an already populated tokenizer, this will overwrite the tokenizer." << std::endl; return false;
+
+	// check that the tokenizer can be loaded and that it wont overwrite anything.
+	if (iTokenizerName.size() <= 0) std::cout << "Invalid tokenizer name." << std::endl; return false;
+
+	// Set the tokenizer name.
+	TokenizerName = iTokenizerName;
+
+	// Now we attempt to load the tokenizer from disk.
+	if (!_LoadTokenizer()) std::cout << "An error occured while trying to load tokenizer." << std::endl; return false;
+
+#ifdef _DEBUG
+	std::cout << "Python function to load tokenizer from disk with name override finished." << std::endl;
+#endif // _DEBUG
+	return true;
 }

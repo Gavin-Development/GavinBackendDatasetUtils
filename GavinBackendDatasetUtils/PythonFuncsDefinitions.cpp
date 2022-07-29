@@ -15,11 +15,14 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
 
     py::class_<Tokenizer>(handle, "Tokenizer")
         .def(py::init<std::string>())
+        .def(py::init<>())
 
         .def_readonly("Words", &Tokenizer::Encodings)
         .def_readonly("Occurrences", &Tokenizer::Commonalities)
-        .def("Save", &Tokenizer::SaveTokenizer)
-        .def("Load", &Tokenizer::LoadTokenizer)
+        .def("Save", static_cast<bool (Tokenizer::*)(void)>(&Tokenizer::SaveTokenizer))
+        .def("Save", static_cast<bool (Tokenizer::*)(std::string)>(&Tokenizer::SaveTokenizer))
+        .def("Load", static_cast<bool (Tokenizer::*)(void)>(&Tokenizer::LoadTokenizer))
+        .def("Load", static_cast<bool (Tokenizer::*)(std::string)>(&Tokenizer::LoadTokenizer))
         .def("Encode", &Tokenizer::Encode)
         .def("GetVocabSize", &Tokenizer::GetVocabSize)
         .def("Decode", &Tokenizer::Decode)

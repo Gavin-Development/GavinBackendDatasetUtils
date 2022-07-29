@@ -367,6 +367,7 @@ public:
     std::vector<uint64_t> Commonalities;
 
     Tokenizer(std::string iTokenizerName);
+    Tokenizer();
 
     // Get Vocab Size function.
     int GetVocabSize() { return Encodings.size(); };
@@ -384,9 +385,11 @@ public:
     
     // Tokenizer load and save functions.
 
-    void SaveTokenizer();
+    bool SaveTokenizer();
+    bool SaveTokenizer(std::string iTokenizerName);
 
-    void LoadTokenizer();
+    bool LoadTokenizer();
+    bool LoadTokenizer(std::string iTokenizerName);
 
 private:
     struct _Encode {
@@ -397,6 +400,10 @@ private:
     };
     // Sort the Encodings & Commonalities vectors to be in the order of descending commonality.
     void _SortEncodings();
+
+    // Save and load functions
+    bool _SaveTokenizer();
+    bool _LoadTokenizer();
 
 
 };
