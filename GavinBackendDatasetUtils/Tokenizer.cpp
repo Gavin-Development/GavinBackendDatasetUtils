@@ -1,5 +1,52 @@
 #include "DataLoader.hpp"
 
+#include <CL/sycl.hpp>
+
+
+// Helper functions for GPU stuff.
+bool _CheckMGPUCapability(std::vector<sycl::device>* pGPUs) {
+	std::vector<std::string> UniqueDeviceNames;
+	std::vector<int> UniqueDeviceCount;
+
+
+	bool DeviceExistsAlready;
+	// List available devices.
+	for (auto device : sycl::device::get_devices(sycl::info::device_type::gpu)) {
+		DeviceExistsAlready = false;
+		for (uint32_t i = 0; i < UniqueDeviceNames.size(); i++) {
+			if (device.get_info<sycl::info::device::name>() == UniqueDeviceNames[i]) {
+				UniqueDeviceCount[i]++;
+				DeviceExistsAlready = true;
+			}
+		}
+
+		if (!DeviceExistsAlready) {
+			UniqueDeviceNames.push_back(device.get_info<sycl::info::device::name>());
+			UniqueDeviceCount.push_back(1);
+		}
+	}
+
+	// pick the most common device in the system.
+	int DeviceToUseIndex = 0;
+	for (uint32_t i = 0; i < UniqueDeviceNames.size(); i++) {
+		if (UniqueDeviceCount[i] > UniqueDeviceCount[DeviceToUseIndex]) {
+			DeviceToUseIndex = i;
+		}
+	}
+
+	// If there are multiple of this device type then we are good to go and push them back to the vector.
+	if (UniqueDeviceCount[DeviceToUseIndex] > 1) {
+		for (auto device : sycl::device::get_devices(sycl::info::device_type::gpu)) {
+			if (device.get_info<sycl::info::device::name>() == UniqueDeviceNames[DeviceToUseIndex]) {
+				pGPUs->push_back(device);
+			}
+		}
+		return true;
+	}
+	// Just incase there are no duplicate devices.
+	else { return false; }
+};
+
 // Constructors.
 Tokenizer::Tokenizer(std::string iTokenizerName) {
 #ifdef _DEBUG
@@ -47,7 +94,7 @@ void Tokenizer::BuildEncodes(std::vector<std::string> Samples) {
 	int64_t StartTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
 	int64_t EndTime;
 	int64_t TimeTaken;
-	
+
 	// Setup samples char array and add in EOL / NULL tokens at the end of each word.
 	std::vector<char> vSamplesChar;
 	uint64_t vSamplesCharSize = 0;
@@ -84,7 +131,7 @@ void Tokenizer::BuildEncodes(std::vector<std::string> Samples) {
 		for (auto& Encode : vFoundEncodes) {
 			if (Encode == BytePair) { FoundAlready = true; }
 		}
-		 
+
 		// If the encode has not already been found in this function.
 		if (!FoundAlready) {
 
@@ -284,8 +331,8 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 
 						if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
 
+						});
 					});
-				});
 
 				// Final stage of sum reduction.
 				q.submit([&](sycl::handler& h) {
@@ -302,8 +349,8 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 							sum += aEncodePresent[j];
 						}
 						aEncodeCommonality[CommonalityAccessIndex] = sum;
+						});
 					});
-				});
 			}
 		}
 
@@ -322,15 +369,15 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	// Do the ultra special mGPU algo :)
 	else {
 		std::cout << "Multi GPU support detected, splitting Ops between " << GPUs.size() << "x " << GPUs[0].get_info<sycl::info::device::name>() << std::endl;
-	
+
 		sycl::queue q(GPUs[0]);
 
 		// Get some useful device info for performing checks and other stuff later on.
 		int MaxWorkGroupSize = q.get_device().get_info<sycl::info::device::max_work_group_size>();
 		uint64_t DeviceMemory = GPUs[0].get_info<sycl::info::device::global_mem_size>();
 		uint64_t TotalMemoryAvailable = DeviceMemory * GPUs.size();
-
 		uint64_t GPUDataSliceSize = Samples.size() / GPUs.size();
+
 		std::vector<std::vector<char>> vSamplesChar;
 		uint64_t VsamplesCharSize = 0;
 		for (uint32_t i = 0; i < GPUs.size(); i++) {
@@ -339,12 +386,12 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 			// If NOT doing the final GPU data prep.
 			if (i < GPUs.size() - 1) {
 				// Iterate over adding samples to the vector.
-				for (uint64_t j = i * GPUDataSliceSize; j < (i + 1 ) * GPUDataSliceSize; j++) {
+				for (uint64_t j = i * GPUDataSliceSize; j < (i + 1) * GPUDataSliceSize; j++) {
 					VsamplesCharSize = vSamplesChar[i].size();
 					// Resize the vector so that it can take the extra sample.
-					vSamplesChar[i].resize(VsamplesCharSize, +Samples[j].size());
+					vSamplesChar[i].resize(VsamplesCharSize + Samples[j].size());
 					// Copy the sample into the vector at the end position.
-					memcpy(&vSamplesChar[i][VsamplesCharSize], Samples[j].c_str(), sizeof(char)* Samples[j].size());
+					memcpy(&vSamplesChar[i][VsamplesCharSize], Samples[j].c_str(), sizeof(char) * Samples[j].size());
 					// Push back a termination token.	
 					vSamplesChar[i].push_back((char)32);
 				}
@@ -355,33 +402,30 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 				for (uint64_t j = i * GPUDataSliceSize; j < Samples.size(); j++) {
 					VsamplesCharSize = vSamplesChar[i].size();
 					// Resize the vector so that it can take the extra sample.
-					vSamplesChar[i].resize(VsamplesCharSize, +Samples[j].size());
+					vSamplesChar[i].resize(VsamplesCharSize + Samples[j].size());
 					// Copy the sample into the vector at the end position.
 					memcpy(&vSamplesChar[i][VsamplesCharSize], Samples[j].c_str(), sizeof(char) * Samples[j].size());
 					// Push back a termination token.	
 					vSamplesChar[i].push_back((char)32);
 				}
 			}
-
 		}
 
 		// Iterate over each of the GPU devices and launch a thread to schedule tasks for them.
 		std::vector<std::thread> vThreads;
 		uint32_t ThreadNum = 0;
 		std::mutex EndOfThreadLockMutex;
-		for (sycl::device GPU : GPUs) {
+		for (sycl::device& GPU : GPUs) {
 			// Push back the thread to do work on the GPU.
-			vThreads.push_back(std::thread([&]() {
-
+			vThreads.push_back(std::thread([&vSamplesChar, ThreadNum, GPU, MaxWorkGroupSize, &EndOfThreadLockMutex, &vFoundEncodes, &vFoundEncodesCommonalities]() {
 				// Setup the size of the buffer thingy.
 				uint64_t vThreadSamplesCharSize = vSamplesChar[ThreadNum].size();
-				
+
 				// Setup the SYCL queue with the device.
 				sycl::queue q(GPU);
 
 				// Setup the buffer full of samples on the device.
 				sycl::buffer<char> bSamplesChar(vSamplesChar[ThreadNum]);
-
 
 				// Determine the WGS and N_Range of the ND kernel.
 				uint64_t WGS = MaxWorkGroupSize;
@@ -406,7 +450,6 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 				std::string BytePair;
 				BytePair.resize(2);
 				BytePair.reserve(2);
-
 				// Loop over all the samples in the buffer and check how many of them appear if they are unique.
 				for (uint64_t i = 0; i < (vThreadSamplesCharSize - 1); i++) {
 					// Creating the byte pair string.
@@ -460,8 +503,8 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 
 								if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
 
+								});
 							});
-						});
 
 						// Final stage of sum reduciton that was partially completed in the main kernel.
 
@@ -479,10 +522,10 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 									sum += aEncodePresent[j];
 								}
 								aEncodeCommonality[CommonalityAccessIndex] = sum;
+								});
 							});
-						});
 					}
-					
+
 				}
 				// Now that all the GPU kernels have launched we need to synchronise them back to the device.
 				q.wait();
@@ -499,16 +542,18 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 
 				// Finally we unlock the mutex so that the other thread can continue to do work.
 				EndOfThreadLockMutex.unlock();
-
-
-			}));
+				}));
 			ThreadNum++;
 		}
+
+		std::cout << "Threads launched." << std::endl;
 
 		// Join the threads back to the main thread and continue on with our day.
 		for (auto& th : vThreads) {
 			th.join();
 		}
+
+		std::cout << "Threads joined." << std::endl;
 	}
 
 	bool ExistingEncode = false;
@@ -530,7 +575,7 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 		}
 	}
 
-	
+
 
 	// Lets see how long it took.
 	EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
@@ -580,7 +625,7 @@ std::vector<std::vector<int>> Tokenizer::Encode(std::vector<std::string> Samples
 				}
 			}
 			// If failed to find an encode we need to set a backup Val for not encodable.
-			if (!EncodeFound){ vEncodedSamples[i].push_back(-1); }
+			if (!EncodeFound) { vEncodedSamples[i].push_back(-1); }
 		}
 	}
 #ifdef _DEBUG
@@ -625,7 +670,7 @@ void Tokenizer::_SortEncodings() {
 		// Iterate over every commonality.
 		for (uint64_t i = 0; i < Encodings.size() - 1; i++) {
 			// If the one closer to the front is smaller than the one next to it.
-			if (Commonalities[i] < Commonalities[i + 1]){
+			if (Commonalities[i] < Commonalities[i + 1]) {
 
 				// Swap the commonalities.
 				uint64_t TmpCommonality = Commonalities[i];
@@ -720,7 +765,7 @@ bool Tokenizer::_LoadTokenizer() {
 
 	// Load in the actual data now.
 
-	Encodings.resize(EncodingsLength /  2);
+	Encodings.resize(EncodingsLength / 2);
 	Commonalities.resize(CommonalitiesLength / sizeof(uint64_t));
 
 	// Loading in the Encodes.
@@ -831,54 +876,3 @@ bool Tokenizer::LoadTokenizer(std::string iTokenizerName) {
 #endif // _DEBUG
 	return true;
 }
-
-
-// Helper functions for GPU stuff.
-bool Tokenizer::_CheckMGPUCapability(std::vector<sycl::device>* pGPUs) {
-	std::vector<std::string> UniqueDeviceNames;
-	std::vector<int> UniqueDeviceCount;
-
-
-	bool DeviceExistsAlready;
-	// List available devices.
-	for (auto device : sycl::device::get_devices(sycl::info::device_type::gpu)) {
-		DeviceExistsAlready = false;
-		std::cout << "Device Name: " << device.get_info<sycl::info::device::name>() << std::endl;
-		std::cout << "Device Memory Size: " << device.get_info<sycl::info::device::global_mem_size>() << std::endl;
-		std::cout << "Device Vendor: " << device.get_info<sycl::info::device::vendor>() << std::endl;
-		std::cout << "Device Version: " << device.get_info<sycl::info::device::version>() << std::endl;
-
-		for (uint32_t i = 0; i < UniqueDeviceNames.size(); i++) {
-			if (device.get_info<sycl::info::device::name>() == UniqueDeviceNames[i]) {
-				UniqueDeviceCount[i]++;
-				DeviceExistsAlready = true;
-			}
-		}
-
-		if (!DeviceExistsAlready) {
-			UniqueDeviceNames.push_back(device.get_info<sycl::info::device::name>());
-			UniqueDeviceCount.push_back(1);
-		}
-	}
-
-	// pick the most common device in the system.
-	int DeviceToUseIndex = 0;
-	for (uint32_t i = 0; i < UniqueDeviceNames.size(); i++) {
-		std::cout << "Device Name: " << UniqueDeviceNames[i] << "  Count: " << UniqueDeviceCount[i] << std::endl;
-		if (UniqueDeviceCount[i] > UniqueDeviceCount[DeviceToUseIndex]) {
-			DeviceToUseIndex = i;
-		}
-	}
-
-	// If there are multiple of this device type then we are good to go and push them back to the vector.
-	if (UniqueDeviceCount[DeviceToUseIndex] > 1) {
-		for (auto device : sycl::device::get_devices(sycl::info::device_type::gpu)) {
-			if (device.get_info<sycl::info::device::name>() == UniqueDeviceNames[DeviceToUseIndex]) {
-				pGPUs->push_back(device);
-			}
-		}
-		return true;
-	}
-	// Just incase there are no duplicate devices.
-	else { return false; }
-};
