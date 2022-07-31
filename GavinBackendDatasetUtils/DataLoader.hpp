@@ -406,4 +406,6 @@ private:
     bool _LoadTokenizer();
 
 
+    bool _CheckMGPUCapability(std::vector<sycl::device>* pGPUs);
+
 };

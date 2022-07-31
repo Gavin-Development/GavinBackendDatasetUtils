@@ -9,7 +9,7 @@ Tokenizer::Tokenizer(std::string iTokenizerName) {
 	// Set up some Tokenizer variables.
 	TokenizerName = iTokenizerName;
 
-	if (TokenizerName.size() <= 0) std::cout << "Invalid tokenizer name." << std::endl; throw std::runtime_error("Invalid tokenizer name.");
+	if (TokenizerName.size() <= 0) { std::cout << TokenizerName << " is an invalid tokenizer name." << std::endl; throw std::runtime_error(TokenizerName + " is an invalid tokenizer name."); }
 
 	Encodings.resize(0);
 	Commonalities.resize(0);
@@ -149,157 +149,367 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 	int64_t EndTime;
 	int64_t TimeTaken;
 
-	// SYCL initialisation.
-	sycl::default_selector d_selector;
-	sycl::queue q(d_selector);
+	// Check device MGPU capabilities.
+	std::vector<sycl::device> GPUs;
 
-	// Alert the user to device selection & other stuff.
-	std::cout << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
-	int MaxWorkGroupSize = q.get_device().get_info<sycl::info::device::max_work_group_size>();
-	std::cout << "Device Max workgroup size: " << MaxWorkGroupSize << std::endl;
-	uint64_t DeviceMemorySize = q.get_device().get_info<sycl::info::device::global_mem_size>();
-	std::cout << "Device Local Memory size: " << DeviceMemorySize << std::endl;
-
-	// Convert Samples to char array and add in EOL / NULL tokens at the end of each word.
-	std::vector<char> vSamplesChar;
-	uint64_t vSamplesCharSize = 0;
-	for (uint64_t i = 0; i < Samples.size(); i++) {
-		vSamplesCharSize = vSamplesChar.size();
-		vSamplesChar.resize(vSamplesCharSize + Samples[i].size());
-		memcpy(&vSamplesChar[vSamplesCharSize], Samples[i].c_str(), sizeof(char) * Samples[i].size());
-		vSamplesChar.push_back((char)32);
-	}
-	sycl::buffer<char> bSamplesChar(vSamplesChar);
-
-	// Now we figure out the values for ND range kernels.
-	// WGS = Work Group Size (set to max size for selected device for good thread occupancy.
-	// N_Range = The range of work units across all WGS in the kernel.
-	vSamplesCharSize = vSamplesChar.size();
-	uint64_t WGS = MaxWorkGroupSize;
-	uint64_t N_Range = 0;
-	uint64_t N_Workgroups = 0;
-	while (N_Workgroups * WGS < vSamplesCharSize) {
-		N_Workgroups++;
-	}
-	N_Range = N_Workgroups * WGS;
-	std::cout << "Work Group Size: " << WGS << std::endl;
-	std::cout << "Global Range: " << N_Range << std::endl;
-
-	// Set a value for the interval to report progress.
-	uint64_t ProgressReportInterval = vSamplesCharSize / 100;
+	bool MGPUSupport = _CheckMGPUCapability(&GPUs);
 
 	// Setup a vector of found Encodes that have been found during the lifetime of this function.
 	std::vector<std::string> vFoundEncodes;
-	std::vector<uint64_t> vFoundEncodesIndices;
+	std::vector<uint64_t> vFoundEncodesCommonalities;
 
-	// Value set to 1 if proposed encode is present at that point in the samples buffer. Sum reduced to another buffer.
-	sycl::buffer<int> bEncodePresent(sycl::range<1> {N_Workgroups});
+	// Do the OG algo.
+	if (!MGPUSupport) {
+		std::cout << "There is no multi GPU support detected." << std::endl;
 
-	// Creating a buffer to store the reduced commonality values in. It is set to the max possible size it could ever be.
-	sycl::buffer<uint64_t> bEncodeCommonality(sycl::range<1> {vSamplesCharSize - 1});
+		// SYCL initialisation. Using the defulat selector since doing this on 1 GPU. Let it choose the best for us.
+		sycl::default_selector d_selector;
+		sycl::queue q(d_selector);
 
-	// Check that the device has enough memory for what we want to do.
-	if (bSamplesChar.byte_size() + bEncodePresent.byte_size() + bEncodeCommonality.byte_size() > DeviceMemorySize) {
-		std::cout << "Breaching device memory limitations, reduce the size of the corpus passed to this function." << std::endl;
-		return;
-	}
+		// Setup a vector of found encode indices during the lifetime of this function.
+		std::vector<uint64_t> vFoundEncodesIndices;
+
+		// Alert the user to device selection & other stuff.
+		std::cout << "Using device: " << q.get_device().get_info<sycl::info::device::name>() << std::endl;
+		int MaxWorkGroupSize = q.get_device().get_info<sycl::info::device::max_work_group_size>();
+		std::cout << "Device Max workgroup size: " << MaxWorkGroupSize << std::endl;
+		uint64_t DeviceMemorySize = q.get_device().get_info<sycl::info::device::global_mem_size>();
+		std::cout << "Device Local Memory size: " << DeviceMemorySize << std::endl;
+
+		// Convert Samples to char array and add in EOL / NULL tokens at the end of each word.
+		std::vector<char> vSamplesChar;
+		uint64_t vSamplesCharSize = 0;
+		for (uint64_t i = 0; i < Samples.size(); i++) {
+			vSamplesCharSize = vSamplesChar.size();
+			vSamplesChar.resize(vSamplesCharSize + Samples[i].size());
+			memcpy(&vSamplesChar[vSamplesCharSize], Samples[i].c_str(), sizeof(char) * Samples[i].size());
+			vSamplesChar.push_back((char)32);
+		}
+		sycl::buffer<char> bSamplesChar(vSamplesChar);
+
+		// Now we figure out the values for ND range kernels.
+		// WGS = Work Group Size (set to max size for selected device for good thread occupancy.
+		// N_Range = The range of work units across all WGS in the kernel.
+		vSamplesCharSize = vSamplesChar.size();
+		uint64_t WGS = MaxWorkGroupSize;
+		uint64_t N_Range = 0;
+		uint64_t N_Workgroups = 0;
+		while (N_Workgroups * WGS < vSamplesCharSize) {
+			N_Workgroups++;
+		}
+		N_Range = N_Workgroups * WGS;
+		std::cout << "Work Group Size: " << WGS << std::endl;
+		std::cout << "Global Range: " << N_Range << std::endl;
+
+		// Set a value for the interval to report progress.
+		uint64_t ProgressReportInterval = vSamplesCharSize / 100;
+
+		// Value set to 1 if proposed encode is present at that point in the samples buffer. Sum reduced to another buffer.
+		sycl::buffer<int> bEncodePresent(sycl::range<1> {N_Workgroups});
+
+		// Creating a buffer to store the reduced commonality values in. It is set to the max possible size it could ever be.
+		sycl::buffer<uint64_t> bEncodeCommonality(sycl::range<1> {vSamplesCharSize - 1});
+
+		// Check that the device has enough memory for what we want to do.
+		if (bSamplesChar.byte_size() + bEncodePresent.byte_size() + bEncodeCommonality.byte_size() > DeviceMemorySize) {
+			std::cout << "Breaching device memory limitations, reduce the size of the corpus passed to this function." << std::endl;
+			return;
+		}
 
 #ifdef _DEBUG
-	std::cout << "Finished prepping long lived GPU buffers." << std::endl;
+		std::cout << "Finished prepping long lived GPU buffers." << std::endl;
 #endif // _DEBUG
 
-	std::cout << "Launching GPU kernels." << std::endl;
+		std::cout << "Launching GPU kernels." << std::endl;
 
-	bool FoundAlready;
-	std::string BytePair;
-	BytePair.resize(2);
-	BytePair.reserve(2);
-	// We iterate over EVERY Unique Byte pair in the sequence and determine the commonality of it.
-	for (uint64_t i = 0; i < (vSamplesChar.size() - 1); i++) {
+		bool FoundAlready;
+		std::string BytePair;
+		BytePair.resize(2);
+		BytePair.reserve(2);
+		// We iterate over EVERY Unique Byte pair in the sequence and determine the commonality of it.
+		for (uint64_t i = 0; i < (vSamplesChar.size() - 1); i++) {
 
-		// Report progress.
-		if (i % ProgressReportInterval == 0) {
-			double PercentDone = (((double)i / vSamplesCharSize) * 100);
-			std::cout << round(PercentDone) << " percent done." << std::endl;
-		}
+			// Report progress.
+			if (i % ProgressReportInterval == 0) {
+				double PercentDone = (((double)i / vSamplesCharSize) * 100);
+				std::cout << round(PercentDone) << " percent done." << std::endl;
+			}
 
-		// creating a string for the byte pair.
-		BytePair = { vSamplesChar[i], vSamplesChar[i + 1] };
+			// creating a string for the byte pair.
+			BytePair = { vSamplesChar[i], vSamplesChar[i + 1] };
 
-		// Check if the encode has already been found in this function.
-		FoundAlready = false;
-		for (auto& Encode : vFoundEncodes) {
-			if (Encode == BytePair) { FoundAlready = true; break; }
-		}
+			// Check if the encode has already been found in this function.
+			FoundAlready = false;
+			for (auto& Encode : vFoundEncodes) {
+				if (Encode == BytePair) { FoundAlready = true; break; }
+			}
 
-		// If the encode has not been found already in this functions lifetime.
-		if (!FoundAlready) {
+			// If the encode has not been found already in this functions lifetime.
+			if (!FoundAlready) {
 
-			// Set it as found in the vectors and record its index.
-			vFoundEncodes.push_back(BytePair);
-			vFoundEncodesIndices.push_back(i);
+				// Set it as found in the vectors and record its index.
+				vFoundEncodes.push_back(BytePair);
+				vFoundEncodesIndices.push_back(i);
 
-			// Now we launch the GPU kernels to check for commonality.
-			auto CommonalityKernel = q.submit([&](sycl::handler& h) {
+				// Now we launch the GPU kernels to check for commonality.
+				auto CommonalityKernel = q.submit([&](sycl::handler& h) {
 
-				sycl::accessor aSamplesChar(bSamplesChar, h, sycl::read_only);
-				sycl::accessor aEncodePresent(bEncodePresent, h, sycl::write_only);
+					sycl::accessor aSamplesChar(bSamplesChar, h, sycl::read_only);
+					sycl::accessor aEncodePresent(bEncodePresent, h, sycl::write_only);
 
-				// Local memory array in each workgroup.
-				sycl::accessor<int, 1, sycl::access::mode::read_write, sycl::access::target::local> aLocal_Mem(sycl::range<1>(WGS), h);
+					// Local memory array in each workgroup.
+					sycl::accessor<int, 1, sycl::access::mode::read_write, sycl::access::target::local> aLocal_Mem(sycl::range<1>(WGS), h);
 
-				h.parallel_for(sycl::nd_range<1>{N_Range, WGS}, [=](sycl::nd_item<1> TID) {
-					auto wg = TID.get_group();
-					auto x = TID.get_global_id(0);
-					auto localmemaccessindex = TID.get_local_id(0);
+					h.parallel_for(sycl::nd_range<1>{N_Range, WGS}, [=](sycl::nd_item<1> TID) {
+						auto wg = TID.get_group();
+						auto x = TID.get_global_id(0);
+						auto localmemaccessindex = TID.get_local_id(0);
 
-					uint64_t SamplesCharEncodeIndex = i;
+						uint64_t SamplesCharEncodeIndex = i;
 
-					// If in range of the string buffer.
-					if (x < vSamplesCharSize - 1) {
-						if (aSamplesChar[SamplesCharEncodeIndex] == aSamplesChar[x] && aSamplesChar[SamplesCharEncodeIndex + 1] == aSamplesChar[x + 1]) {
-							aLocal_Mem[localmemaccessindex] = 1;
+						// If in range of the string buffer.
+						if (x < vSamplesCharSize - 1) {
+							if (aSamplesChar[SamplesCharEncodeIndex] == aSamplesChar[x] && aSamplesChar[SamplesCharEncodeIndex + 1] == aSamplesChar[x + 1]) {
+								aLocal_Mem[localmemaccessindex] = 1;
+							}
+							else aLocal_Mem[localmemaccessindex] = 0;
 						}
 						else aLocal_Mem[localmemaccessindex] = 0;
-					}
-					else aLocal_Mem[localmemaccessindex] = 0;
 
-					// synchronise all the kernels.
-					TID.barrier(sycl::access::fence_space::local_space);
+						// synchronise all the kernels.
+						TID.barrier(sycl::access::fence_space::local_space);
 
-					// do a partial sum reduction from local memory into the device global memory (VRAM on a GPU).
-					int sum_wg = sycl::reduce_over_group(wg, aLocal_Mem[localmemaccessindex], sycl::plus<>());
+						// do a partial sum reduction from local memory into the device global memory (VRAM on a GPU).
+						int sum_wg = sycl::reduce_over_group(wg, aLocal_Mem[localmemaccessindex], sycl::plus<>());
 
-					if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
+						if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
 
 					});
 				});
 
-			// Final stage of sum reduction.
-			q.submit([&](sycl::handler& h) {
-				// Depends on the previous kernel.
-				h.depends_on(CommonalityKernel);
+				// Final stage of sum reduction.
+				q.submit([&](sycl::handler& h) {
+					// Depends on the previous kernel.
+					h.depends_on(CommonalityKernel);
 
-				sycl::accessor aEncodePresent(bEncodePresent, h, sycl::read_write);
-				sycl::accessor aEncodeCommonality(bEncodeCommonality, h, sycl::write_only);
+					sycl::accessor aEncodePresent(bEncodePresent, h, sycl::read_write);
+					sycl::accessor aEncodeCommonality(bEncodeCommonality, h, sycl::write_only);
 
-				h.single_task([=]() {
-					uint64_t sum = 0;
-					uint64_t CommonalityAccessIndex = i;
-					for (int j = 0; j < N_Workgroups; j++) {
-						sum += aEncodePresent[j];
-					}
-					aEncodeCommonality[CommonalityAccessIndex] = sum;
+					h.single_task([=]() {
+						uint64_t sum = 0;
+						uint64_t CommonalityAccessIndex = i;
+						for (int j = 0; j < N_Workgroups; j++) {
+							sum += aEncodePresent[j];
+						}
+						aEncodeCommonality[CommonalityAccessIndex] = sum;
 					});
 				});
+			}
 		}
-	}	
 
-	std::cout << "GPU kernels launched." << std::endl;
-	// Now we wait for the queue to finish and return the results to CPU.
-	q.wait();
+		std::cout << "GPU kernels launched." << std::endl;
+		// Now we wait for the queue to finish and return the results to CPU.
+		q.wait();
 
-	std::cout << "GPU Kernels Finished." << std::endl;
+		std::cout << "GPU Kernels Finished." << std::endl;
+
+		// Loop over all the found Encodes and push them back to the main vector.
+		for (uint64_t i = 0; i < vFoundEncodes.size(); i++) {
+			vFoundEncodesCommonalities.push_back(bEncodeCommonality.get_host_access()[vFoundEncodesIndices[i]]);
+		}
+	}
+
+	// Do the ultra special mGPU algo :)
+	else {
+		std::cout << "Multi GPU support detected, splitting Ops between " << GPUs.size() << "x " << GPUs[0].get_info<sycl::info::device::name>() << std::endl;
+	
+		sycl::queue q(GPUs[0]);
+
+		// Get some useful device info for performing checks and other stuff later on.
+		int MaxWorkGroupSize = q.get_device().get_info<sycl::info::device::max_work_group_size>();
+		uint64_t DeviceMemory = GPUs[0].get_info<sycl::info::device::global_mem_size>();
+		uint64_t TotalMemoryAvailable = DeviceMemory * GPUs.size();
+
+		uint64_t GPUDataSliceSize = Samples.size() / GPUs.size();
+		std::vector<std::vector<char>> vSamplesChar;
+		uint64_t VsamplesCharSize = 0;
+		for (uint32_t i = 0; i < GPUs.size(); i++) {
+			// Resize along dim 0
+			vSamplesChar.resize(vSamplesChar.size() + 1);
+			// If NOT doing the final GPU data prep.
+			if (i < GPUs.size() - 1) {
+				// Iterate over adding samples to the vector.
+				for (uint64_t j = i * GPUDataSliceSize; j < (i + 1 ) * GPUDataSliceSize; j++) {
+					VsamplesCharSize = vSamplesChar[i].size();
+					// Resize the vector so that it can take the extra sample.
+					vSamplesChar[i].resize(VsamplesCharSize, +Samples[j].size());
+					// Copy the sample into the vector at the end position.
+					memcpy(&vSamplesChar[i][VsamplesCharSize], Samples[j].c_str(), sizeof(char)* Samples[j].size());
+					// Push back a termination token.	
+					vSamplesChar[i].push_back((char)32);
+				}
+			}
+			// If we ARE doing the final GPU data prep.
+			else {
+				// Iterate over adding samples to the vector. The limits are changed for the final GPU data prep as it extends to the end of the vector instead of to the end of its block.
+				for (uint64_t j = i * GPUDataSliceSize; j < Samples.size(); j++) {
+					VsamplesCharSize = vSamplesChar[i].size();
+					// Resize the vector so that it can take the extra sample.
+					vSamplesChar[i].resize(VsamplesCharSize, +Samples[j].size());
+					// Copy the sample into the vector at the end position.
+					memcpy(&vSamplesChar[i][VsamplesCharSize], Samples[j].c_str(), sizeof(char) * Samples[j].size());
+					// Push back a termination token.	
+					vSamplesChar[i].push_back((char)32);
+				}
+			}
+
+		}
+
+		// Iterate over each of the GPU devices and launch a thread to schedule tasks for them.
+		std::vector<std::thread> vThreads;
+		uint32_t ThreadNum = 0;
+		std::mutex EndOfThreadLockMutex;
+		for (sycl::device GPU : GPUs) {
+			// Push back the thread to do work on the GPU.
+			vThreads.push_back(std::thread([&]() {
+
+				// Setup the size of the buffer thingy.
+				uint64_t vThreadSamplesCharSize = vSamplesChar[ThreadNum].size();
+				
+				// Setup the SYCL queue with the device.
+				sycl::queue q(GPU);
+
+				// Setup the buffer full of samples on the device.
+				sycl::buffer<char> bSamplesChar(vSamplesChar[ThreadNum]);
+
+
+				// Determine the WGS and N_Range of the ND kernel.
+				uint64_t WGS = MaxWorkGroupSize;
+				uint64_t N_Range = 0;
+				uint64_t N_WorkGroups = 0;
+				while (N_WorkGroups * WGS < vThreadSamplesCharSize) {
+					N_WorkGroups++;
+				}
+				N_Range = N_WorkGroups * WGS;
+
+				// Setup the CPU side vectors for tracking the already found encodes.
+				std::vector<std::string> vThreadFoundEncodes;
+				std::vector<uint64_t> vThreadFoundEncodesIndices;
+
+				// Setup the buffer to record if the encode is present in the WGP, this buffer will store how many of the encode are present in the WGP items.
+				sycl::buffer<int> bEncodePresent(sycl::range<1> {N_WorkGroups});
+
+				// Setup the buffer to store the encode overall commonality.
+				sycl::buffer<uint64_t> bEncodeCommonality(sycl::range<1> {vThreadSamplesCharSize - 1});
+
+				bool FoundAlready;
+				std::string BytePair;
+				BytePair.resize(2);
+				BytePair.reserve(2);
+
+				// Loop over all the samples in the buffer and check how many of them appear if they are unique.
+				for (uint64_t i = 0; i < (vThreadSamplesCharSize - 1); i++) {
+					// Creating the byte pair string.
+					BytePair = { vSamplesChar[ThreadNum][i], vSamplesChar[ThreadNum][i + 1] };
+
+					// Check if the encode has already been found in this thread.
+					FoundAlready = false;
+					for (auto& Encode : vThreadFoundEncodes) {
+						if (Encode == BytePair) {
+							FoundAlready = true; break;
+						}
+					}
+
+					// If the encode has not already been found in this thread.
+					if (!FoundAlready) {
+
+						vThreadFoundEncodes.push_back(BytePair);
+						vThreadFoundEncodesIndices.push_back(i);
+
+						// Now we launch the GPU kernels to check for commonality.
+
+						auto CommonalityKernel = q.submit([&](sycl::handler& h) {
+
+							sycl::accessor aSamplesChar(bSamplesChar, h, sycl::read_only);
+							sycl::accessor aEncodePresent(bEncodePresent, h, sycl::write_only);
+
+							// Local memory array in each workgroup.
+							sycl::accessor<int, 1, sycl::access::mode::read_write, sycl::access::target::local> aLocal_Mem(sycl::range<1>(WGS), h);
+
+							h.parallel_for(sycl::nd_range<1>{N_Range, WGS}, [=](sycl::nd_item<1> TID) {
+								auto wg = TID.get_group();
+								auto x = TID.get_global_id(0);
+								auto localmemaccessindex = TID.get_local_id(0);
+
+								uint64_t SamplesCharEncodeIndex = i;
+
+								// If in range of the string buffer.
+								if (x < vThreadSamplesCharSize - 1) {
+									if (aSamplesChar[SamplesCharEncodeIndex] == aSamplesChar[x] && aSamplesChar[SamplesCharEncodeIndex + 1] == aSamplesChar[x + 1]) {
+										aLocal_Mem[localmemaccessindex] = 1;
+									}
+									else aLocal_Mem[localmemaccessindex] = 0;
+								}
+								else aLocal_Mem[localmemaccessindex] = 0;
+
+								// synchronise all the kernels.
+								TID.barrier(sycl::access::fence_space::local_space);
+
+								// do a partial sum reduction from local memory into the device global memory (VRAM on a GPU).
+								int sum_wg = sycl::reduce_over_group(wg, aLocal_Mem[localmemaccessindex], sycl::plus<>());
+
+								if (localmemaccessindex == 0) { aEncodePresent[TID.get_group_linear_id()] = sum_wg; }
+
+							});
+						});
+
+						// Final stage of sum reduciton that was partially completed in the main kernel.
+
+						q.submit([&](sycl::handler& h) {
+							// Depends on the previous Kernel.
+							h.depends_on(CommonalityKernel);
+
+							sycl::accessor aEncodePresent(bEncodePresent, h, sycl::read_write);
+							sycl::accessor aEncodeCommonality(bEncodeCommonality, h, sycl::write_only);
+
+							h.single_task([=]() {
+								uint64_t sum = 0;
+								uint64_t CommonalityAccessIndex = i;
+								for (int j = 0; j < N_WorkGroups; j++) {
+									sum += aEncodePresent[j];
+								}
+								aEncodeCommonality[CommonalityAccessIndex] = sum;
+							});
+						});
+					}
+					
+				}
+				// Now that all the GPU kernels have launched we need to synchronise them back to the device.
+				q.wait();
+
+				// Try to acquire the mutex to append stuff to the main threads vectors.
+				bool AcquiredMutex = false;
+				while (!AcquiredMutex) { AcquiredMutex = EndOfThreadLockMutex.try_lock(); };
+
+				// Loop over all the found Encodes and push them back to the main vector.
+				for (uint64_t i = 0; i < vThreadFoundEncodes.size(); i++) {
+					vFoundEncodes.push_back(vThreadFoundEncodes[i]);
+					vFoundEncodesCommonalities.push_back(bEncodeCommonality.get_host_access()[vThreadFoundEncodesIndices[i]]);
+				}
+
+				// Finally we unlock the mutex so that the other thread can continue to do work.
+				EndOfThreadLockMutex.unlock();
+
+
+			}));
+			ThreadNum++;
+		}
+
+		// Join the threads back to the main thread and continue on with our day.
+		for (auto& th : vThreads) {
+			th.join();
+		}
+	}
 
 	bool ExistingEncode = false;
 	// Now we iterate over found encodes retrieveing their commonality back from the GPU.
@@ -308,17 +518,19 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 		// Iterate over existing encodings vector to check if its already been found previously before this function run.
 		for (uint64_t j = 0; j < Encodings.size(); j++) {
 			if (Encodings[j] == vFoundEncodes[i]) {
-				Commonalities[j] += bEncodeCommonality.get_host_access()[vFoundEncodesIndices[i]];
+				Commonalities[j] += vFoundEncodesCommonalities[i];
 				ExistingEncode = true;
 			}
 		}
 
 		// If it was not an existing encode then we append it to the encodes vector along with its commonality to the commonality vector.
 		if (!ExistingEncode) {
-			Commonalities.push_back(bEncodeCommonality.get_host_access()[vFoundEncodesIndices[i]]);
+			Commonalities.push_back(vFoundEncodesCommonalities[i]);
 			Encodings.push_back(vFoundEncodes[i]);
 		}
 	}
+
+	
 
 	// Lets see how long it took.
 	EndTime = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
@@ -447,7 +659,7 @@ bool Tokenizer::_SaveTokenizer() {
 	std::fstream File(FileName, std::ios::binary | std::ios::out);
 
 	// Check if the file was opened correctly, if not return false to the calling function.
-	if (!File.is_open()) std::cout << "Failed to create file on disk." << std::endl; return false;
+	if (!File.is_open()) { std::cout << "Failed to create file on disk." << std::endl; return false; }
 
 	// We need to store the total file length, the length of the commonalities section, the length of the encodings section and an offset for each of them.
 	uint64_t TotalFileSize, CommonalitiesLength, EncodingsLength, CommonalitiesOffset, EncodingsOffset;
@@ -493,7 +705,7 @@ bool Tokenizer::_LoadTokenizer() {
 	std::ifstream File(FileName, std::ios::binary | std::ios::in);
 
 	// check if the file opened correctlym, if not return false to the calling function.
-	if (!File.is_open()) std::cout << "Failed to open file on disk." << std::endl; return false;
+	if (!File.is_open()) { std::cout << "Failed to open file on disk." << std::endl; return false; }
 
 	uint64_t TotalFileSize, CommonalitiesLength, EncodingsLength, CommonalitiesOffset, EncodingsOffset;
 
@@ -582,12 +794,12 @@ bool Tokenizer::LoadTokenizer() {
 #endif // _DEBUG
 
 	// Warn the programmer that they will be overwriting the tokenizer if it is already populated.
-	if (Encodings.size() > 0 || Commonalities.size() > 0) std::cout << "Warning, you are loading a tokenizer from disk to an already populated tokenizer, this will overwrite the tokenizer." << std::endl; return false;
+	if (Encodings.size() > 0 || Commonalities.size() > 0) { std::cout << "Warning, you are loading a tokenizer from disk to an already populated tokenizer, this will overwrite the tokenizer." << std::endl; return false; }
 
-	if (TokenizerName.size() <= 0) std::cout << "Un named tokenizer, please pass a name for the tokenizer you wish to load." << std::endl; return false;
+	if (TokenizerName.size() <= 0) { std::cout << "Un named tokenizer, please pass a name for the tokenizer you wish to load." << std::endl; return false; }
 
 	// Now we attempt to load the tokenizer from disk.
-	if (!_LoadTokenizer()) std::cout << "An error occured while trying to load tokenizer." << std::endl; return false;
+	if (!_LoadTokenizer()) { std::cout << "An error occured while trying to load tokenizer." << std::endl; return false; }
 
 
 #ifdef _DEBUG
@@ -603,19 +815,70 @@ bool Tokenizer::LoadTokenizer(std::string iTokenizerName) {
 #endif // _DEBUG
 
 	// Warn the programmer that they will be overwriting the tokenizer if it is already populated.
-	if (Encodings.size() > 0 || Commonalities.size() > 0) std::cout << "Warning, you are loading a tokenizer from disk to an already populated tokenizer, this will overwrite the tokenizer." << std::endl; return false;
+	if (Encodings.size() > 0 || Commonalities.size() > 0) { std::cout << "Warning, you are loading a tokenizer from disk to an already populated tokenizer, this will overwrite the tokenizer." << std::endl; return false; }
 
 	// check that the tokenizer can be loaded and that it wont overwrite anything.
-	if (iTokenizerName.size() <= 0) std::cout << "Invalid tokenizer name." << std::endl; return false;
+	if (iTokenizerName.size() <= 0) { std::cout << "Invalid tokenizer name." << std::endl; return false; }
 
 	// Set the tokenizer name.
 	TokenizerName = iTokenizerName;
 
 	// Now we attempt to load the tokenizer from disk.
-	if (!_LoadTokenizer()) std::cout << "An error occured while trying to load tokenizer." << std::endl; return false;
+	if (!_LoadTokenizer()) { std::cout << "An error occured while trying to load tokenizer." << std::endl; return false; }
 
 #ifdef _DEBUG
 	std::cout << "Python function to load tokenizer from disk with name override finished." << std::endl;
 #endif // _DEBUG
 	return true;
 }
+
+
+// Helper functions for GPU stuff.
+bool Tokenizer::_CheckMGPUCapability(std::vector<sycl::device>* pGPUs) {
+	std::vector<std::string> UniqueDeviceNames;
+	std::vector<int> UniqueDeviceCount;
+
+
+	bool DeviceExistsAlready;
+	// List available devices.
+	for (auto device : sycl::device::get_devices(sycl::info::device_type::gpu)) {
+		DeviceExistsAlready = false;
+		std::cout << "Device Name: " << device.get_info<sycl::info::device::name>() << std::endl;
+		std::cout << "Device Memory Size: " << device.get_info<sycl::info::device::global_mem_size>() << std::endl;
+		std::cout << "Device Vendor: " << device.get_info<sycl::info::device::vendor>() << std::endl;
+		std::cout << "Device Version: " << device.get_info<sycl::info::device::version>() << std::endl;
+
+		for (uint32_t i = 0; i < UniqueDeviceNames.size(); i++) {
+			if (device.get_info<sycl::info::device::name>() == UniqueDeviceNames[i]) {
+				UniqueDeviceCount[i]++;
+				DeviceExistsAlready = true;
+			}
+		}
+
+		if (!DeviceExistsAlready) {
+			UniqueDeviceNames.push_back(device.get_info<sycl::info::device::name>());
+			UniqueDeviceCount.push_back(1);
+		}
+	}
+
+	// pick the most common device in the system.
+	int DeviceToUseIndex = 0;
+	for (uint32_t i = 0; i < UniqueDeviceNames.size(); i++) {
+		std::cout << "Device Name: " << UniqueDeviceNames[i] << "  Count: " << UniqueDeviceCount[i] << std::endl;
+		if (UniqueDeviceCount[i] > UniqueDeviceCount[DeviceToUseIndex]) {
+			DeviceToUseIndex = i;
+		}
+	}
+
+	// If there are multiple of this device type then we are good to go and push them back to the vector.
+	if (UniqueDeviceCount[DeviceToUseIndex] > 1) {
+		for (auto device : sycl::device::get_devices(sycl::info::device_type::gpu)) {
+			if (device.get_info<sycl::info::device::name>() == UniqueDeviceNames[DeviceToUseIndex]) {
+				pGPUs->push_back(device);
+			}
+		}
+		return true;
+	}
+	// Just incase there are no duplicate devices.
+	else { return false; }
+};
