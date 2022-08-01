@@ -20,7 +20,6 @@
 #include <vector>
 #include <math.h>
 
-#include <CL/sycl.hpp>
 
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1

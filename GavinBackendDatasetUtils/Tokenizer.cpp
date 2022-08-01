@@ -795,13 +795,13 @@ bool Tokenizer::SaveTokenizer() {
 
 	// First we need to perform some checks to ensure that the tokenizer can be saved to disk.
 
-	if (Encodings.size() <= 0 && Commonalities.size() != Encodings.size()) std::cout << "Tokenizer can not be saved, contains no enodes." << std::endl; return false;
+	if (Encodings.size() <= 0 && Commonalities.size() != Encodings.size()) { std::cout << "Tokenizer can not be saved, contains no enodes." << std::endl; return false; }
 
-	if (TokenizerName.size() <= 0) std::cout << "No tokenizer name specified." << std::endl; return false;
+	if (TokenizerName.size() <= 0) { std::cout << "No tokenizer name specified." << std::endl; return false; }
 
 
 	// Now we attempt to save the tokenizer to disk.
-	if (!_SaveTokenizer()) std::cout << "An error occured while trying to save tokenizer." << std::endl; return false;
+	if (!_SaveTokenizer()) { std::cout << "An error occured while trying to save tokenizer." << std::endl; return false; }
 
 #ifdef _DEBUG
 	std::cout << "Python exposed tokenizer save function complete." << std::endl;
@@ -819,12 +819,12 @@ bool Tokenizer::SaveTokenizer(std::string iTokenizerName) {
 	TokenizerName = iTokenizerName;
 
 	// perform some checks to ensure that the tokenizer can actually be saved.
-	if (Encodings.size() <= 0 && Commonalities.size() != Encodings.size()) std::cout << "Tokenizer can not be saved, contains no enodes." << std::endl; return false;
+	if (Encodings.size() <= 0 && Commonalities.size() != Encodings.size()) { std::cout << "Tokenizer can not be saved, contains no enodes." << std::endl; return false; }
 
-	if (TokenizerName.size() <= 0) std::cout << "Invalid tokenizer name specified." << std::endl; return false;
+	if (TokenizerName.size() <= 0) { std::cout << "Invalid tokenizer name specified." << std::endl; return false; }
 
 	// Now we attempt to save the tokenizer to disk.
-	if (!_SaveTokenizer()) std::cout << "An error occured while trying to save tokenizer." << std::endl; return false;
+	if (!_SaveTokenizer()) { std::cout << "An error occured while trying to save tokenizer." << std::endl; return false; }
 
 #ifdef _DEBUG
 	std::cout << "Python exposed tokenizer save function complete." << std::endl;
