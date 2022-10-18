@@ -126,9 +126,9 @@ py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, s
 		CurrentLine++;
 
 		// Report progress (if neccesary)
-		if (CurrentLine % ProgressReportInterval == 0) {
-			std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
-		}
+		// if (CurrentLine % ProgressReportInterval == 0) {
+		//	std::cout << (float)(CurrentLine * 100 / MaxSamples) << "% Done." << std::endl;
+		// }
 	}
 	
 
