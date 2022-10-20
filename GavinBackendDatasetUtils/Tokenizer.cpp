@@ -34,17 +34,25 @@ bool _CheckMGPUCapability(std::vector<sycl::device>* pGPUs) {
 		}
 	}
 
-	// If there are multiple of this device type then we are good to go and push them back to the vector.
-	if (UniqueDeviceCount[DeviceToUseIndex] > 1) {
-		for (auto device : sycl::device::get_devices(sycl::info::device_type::gpu)) {
-			if (device.get_info<sycl::info::device::name>() == UniqueDeviceNames[DeviceToUseIndex]) {
-				pGPUs->push_back(device);
+	// Guard this function in case this method is called on a CPU only machine.
+	if (UniqueDeviceCount.size() > 0) {
+		// If there are multiple of this device type then we are good to go and push them back to the vector.
+		if (UniqueDeviceCount[DeviceToUseIndex] > 1) {
+			for (auto device : sycl::device::get_devices(sycl::info::device_type::gpu)) {
+				if (device.get_info<sycl::info::device::name>() == UniqueDeviceNames[DeviceToUseIndex]) {
+					pGPUs->push_back(device);
+				}
 			}
+			return true;
 		}
-		return true;
+		
+		// Just incase there are no duplicate devices.
+		else { return false; }
 	}
-	// Just incase there are no duplicate devices.
-	else { return false; }
+	else {
+		return false;
+	}
+	
 };
 
 // Constructors.
