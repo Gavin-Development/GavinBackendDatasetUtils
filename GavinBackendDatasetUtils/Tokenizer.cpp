@@ -228,7 +228,7 @@ void Tokenizer::BuildEncodes_GPU(std::vector<std::string> Samples) {
 		uint64_t vSamplesCharSize = 0;
 		for (uint64_t i = 0; i < Samples.size(); i++) {
 			vSamplesCharSize = vSamplesChar.size();
-			vSamplesChar.resize(vSamplesCharSize + Samples[i].size());
+			vSamplesChar.resize(vSamplesCharSize + Samples[i].size() + 1);
 			memcpy(&vSamplesChar[vSamplesCharSize], Samples[i].c_str(), sizeof(char) * Samples[i].size());
 			vSamplesChar.push_back((char)32);
 		}
