@@ -703,12 +703,12 @@ void Tokenizer::_SortEncodings() {
 
 bool Tokenizer::_SaveTokenizer() {
 #ifdef _DEBUG
-	std::cout << "Saving Tokenizer to disc." << std::endl;
+	std::cout << "Saving Tokenizer to disk." << std::endl;
 #endif // _DEBUG
 
 	std::string FileName = "./" + TokenizerName + ".TOKENIZER";
 
-	// Now we open a file pointer to the local director on disc.
+	// Now we open a file pointer to the local director on disk.
 	std::fstream File(FileName, std::ios::binary | std::ios::out);
 
 	// Check if the file was opened correctly, if not return false to the calling function.
@@ -750,47 +750,89 @@ bool Tokenizer::_SaveTokenizer() {
 
 bool Tokenizer::_LoadTokenizer() {
 #ifdef _DEBUG
-	std::cout << "Loading Tokenizer from disc." << std::endl;
+	std::cout << "Loading Tokenizer from disk." << std::endl;
 #endif // _DEBUG
+	if (TokenizerName.find(".subwords") == std::string::npos) {
+		std::string FileName = "./" + TokenizerName + ".TOKENIZER";
+		// Create a file pointer so we can read in data from the file.
+		std::ifstream File(FileName, std::ios::binary | std::ios::in);
 
-	std::string FileName = "./" + TokenizerName + ".TOKENIZER";
-	// Create a file pointer so we can read in data from the file.
-	std::ifstream File(FileName, std::ios::binary | std::ios::in);
+		// check if the file opened correctlym, if not return false to the calling function.
+		if (!File.is_open()) { std::cout << "Failed to open file on disk." << std::endl; return false; }
 
-	// check if the file opened correctlym, if not return false to the calling function.
-	if (!File.is_open()) { std::cout << "Failed to open file on disk." << std::endl; return false; }
+		uint64_t TotalFileSize, CommonalitiesLength, EncodingsLength, CommonalitiesOffset, EncodingsOffset;
 
-	uint64_t TotalFileSize, CommonalitiesLength, EncodingsLength, CommonalitiesOffset, EncodingsOffset;
+		// Seek to the beginning of the file to load in data.
+		File.seekg(0);
 
-	// Seek to the beginning of the file to load in data.
-	File.seekg(0);
+		File.read((char*)&TotalFileSize, sizeof(uint64_t));
+		File.read((char*)&EncodingsOffset, sizeof(uint64_t));
+		File.read((char*)&EncodingsLength, sizeof(uint64_t));
+		File.read((char*)&CommonalitiesOffset, sizeof(uint64_t));
+		File.read((char*)&CommonalitiesLength, sizeof(uint64_t));
 
-	File.read((char*)&TotalFileSize, sizeof(uint64_t));
-	File.read((char*)&EncodingsOffset, sizeof(uint64_t));
-	File.read((char*)&EncodingsLength, sizeof(uint64_t));
-	File.read((char*)&CommonalitiesOffset, sizeof(uint64_t));
-	File.read((char*)&CommonalitiesLength, sizeof(uint64_t));
+		// Load in the actual data now.
 
-	// Load in the actual data now.
+		Encodings.resize(EncodingsLength / 2);
+		Commonalities.resize(CommonalitiesLength / sizeof(uint64_t));
 
-	Encodings.resize(EncodingsLength / 2);
-	Commonalities.resize(CommonalitiesLength / sizeof(uint64_t));
+		// Loading in the Encodes.
+		File.seekg(EncodingsOffset);
+		for (auto& Encode : Encodings) {
+			Encode.resize(2);
+			File.read((char*)Encode.data(), sizeof(char) * 2);
+		}
 
-	// Loading in the Encodes.
-	File.seekg(EncodingsOffset);
-	for (auto& Encode : Encodings) {
-		Encode.resize(2);
-		File.read((char*)Encode.data(), sizeof(char) * 2);
+		// Loading in the encode commonalities.
+		File.seekg(CommonalitiesOffset);
+		for (auto& Commonality : Commonalities) {
+			File.read((char*)&Commonality, sizeof(uint64_t));
+		}
 	}
+	else {
+		// Ability to load from old file type
+		std::string FileName = TokenizerName;
+		// Create a file pointer so we can read in data from the file.
+		std::ifstream File(FileName, std::ios::binary | std::ios::in);
 
-	// Loading in the encode commonalities.
-	File.seekg(CommonalitiesOffset);
-	for (auto& Commonality : Commonalities) {
-		File.read((char*)&Commonality, sizeof(uint64_t));
+		// Count number of lines
+		uint64_t no_lines = 0;
+		FILE* infile = fopen(FileName.c_str(), "r");
+		int ch;
+
+		while (EOF != (ch = getc(infile)))
+			if ('\n' == ch)
+				++no_lines;
+
+#ifdef _DEBUG
+		std::cout << "Vocab Size: " << no_lines << std::endl;
+#endif
+		// Seek to start
+		File.seekg(0);
+		// Skip over first line
+		uint64_t i = 0;
+		std::string line;
+		while (std::getline(File, line)) {
+			if (i != 0) {
+#ifdef _DEBUG
+				std::cout << "Loading sample" << line << std::endl;
+#endif
+				Commonalities.push_back(no_lines - i);
+				line.erase(std::remove(line.begin(), line.end(), '\n'), line.cend());
+				Encodings.push_back(line);
+			}
+			else
+			{
+#ifdef _DEBUG
+				std::cout << "Skipped first line" << line << std::endl;
+#endif
+			}
+			i++;
+		}
 	}
 
 #ifdef _DEBUG
-	std::cout << "Tokenizer values Loaded from dic." << std::endl;
+	std::cout << "Tokenizer values Loaded from disk." << std::endl;
 #endif // _DEBUG
 
 	return true;
