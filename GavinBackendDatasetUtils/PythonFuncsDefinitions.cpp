@@ -3,6 +3,7 @@
 int InitModule() {
     std::cout << "GavinBackendDataSetTools Loaded. Please see readme.md for usage. THIS VERSION IS ONEAPI ACCELERATED." << std::endl;
 
+
     std::cout << "Module init completed." << std::endl;
     return 0;
 }
@@ -10,6 +11,7 @@ int InitModule() {
 PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
     InitModule();
     handle.doc() = "This module is a custom module written in c++ to accelerate dataset loading for Gavin Bot made by Josh (Scot_Survivor)";
+
     handle.def("load_train_data_mt", &LoadTrainDataMT);
     handle.def("load_train_data_st", &LoadTrainDataST);
 
@@ -37,6 +39,21 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def("get_slice", &BINFile::get_slice)
         .def("append", &BINFile::append)
         .def("__getitem__", static_cast<py::array_t<int>(BINFile::*)(uint64_t)>(&BINFile::operator[]));
+
+
+    py::class_<DataGenerator>(handle, "DataGenerator")
+        .def(py::init<std::string, std::string, std::string, uint64_t, int, int, int, int>())
+        .def("UpdateBuffer", & DataGenerator::UpdateDataBuffer)
+        .def_readonly("ToSampleBuffer", &DataGenerator::ToSampleBufferArray_t)
+        .def_readonly("FromSampleBuffer", &DataGenerator::FromSampleBufferArray_t);
+
+    py::class_<Tokenizer>(handle, "Tokenizer")
+        .def(py::init<std::string, uint64_t>())
+        .def(py::init<std::string>())
+
+        .def_readonly("Words", &Tokenizer::Encodings)
+        .def_readonly("Occurances", &Tokenizer::Commonality)
+        .def("Tokenize", &Tokenizer::Tokenize);
 
 
 #ifdef VERSION_INFO

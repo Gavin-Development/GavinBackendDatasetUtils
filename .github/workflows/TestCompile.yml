@@ -37,6 +37,8 @@ jobs:
     runs-on: ${{ matrix.config.os }}
     steps:
     - uses: actions/checkout@v2
+      with:
+        ref: cmake
     - name: Print enviroment
       run: |
         echo github.event.action: ${{ github.event.action }}
