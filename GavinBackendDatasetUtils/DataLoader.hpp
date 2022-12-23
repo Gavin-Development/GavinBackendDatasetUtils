@@ -1,6 +1,8 @@
 #pragma once
 
+#ifdef WIN32
 #include <corecrt.h>
+#endif
 
 #include <pybind11/pybind11.h>
 #include <pybind11/embed.h>
