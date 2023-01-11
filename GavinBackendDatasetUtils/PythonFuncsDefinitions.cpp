@@ -13,7 +13,7 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
     handle.def("load_train_data_mt", &LoadTrainDataMT);
     handle.def("load_train_data_st", &LoadTrainDataST);
 
-    py::class_<Tokenizer>(handle, "Tokenizer")
+    /*py::class_<Tokenizer>(handle, "Tokenizer")
         .def(py::init<std::string>())
         .def(py::init<>())
 
@@ -28,6 +28,14 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def("decode", &Tokenizer::Decode)
         .def("build_encodes_GPU", &Tokenizer::BuildEncodes_GPU)
         .def("build_encodes", &Tokenizer::BuildEncodes);
+    */
+
+    py::class_<Tokenizer>(handle, "Tokenizer")
+        .def(py::init<>())
+
+        .def("Build", &Tokenizer::Build)
+        .def("Encode", &Tokenizer::Encode)
+        .def("Decode", &Tokenizer::Decode);
 
     py::class_<BINFile>(handle, "BINFile")
         .def(py::init<std::string, int, int, int, int>())

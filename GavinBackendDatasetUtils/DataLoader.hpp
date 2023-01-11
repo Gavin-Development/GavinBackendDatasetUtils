@@ -20,6 +20,8 @@
 #include <vector>
 #include <math.h>
 
+#include <CL/sycl.hpp>
+
 
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
@@ -361,50 +363,39 @@ private:
 
 class Tokenizer {
 public:
-    std::string TokenizerName;
-    std::vector<std::string> Encodings;
-    std::vector<uint64_t> Commonalities;
+    // Reserved Tokens.
 
-    Tokenizer(std::string iTokenizerName);
-    Tokenizer();
+    std::pair<uint64_t, std::string> UnknownToken = { 69420, "[UNK]" };
 
-    // Get Vocab Size function.
-    int GetVocabSize() { return Encodings.size(); };
+    // Constructors.
 
-    // Build Encodes Functions.
-    void BuildEncodes(std::vector<std::string> Samples);
-    void BuildEncodes_GPU(std::vector<std::string> Samples);
+    Tokenizer() {};
+    Tokenizer(std::string FilePath);
 
-    // Encode Strings Functions.
-    //std::vector<int> Encode_GPU(std::vector<std::string> Samples); // Needs re write.
-    std::vector<std::vector<int>> Encode(std::vector<std::string> Samples);
+    // Save / Load Functions.
+    void Save() {};
+    void Save(std::string FilePath) {};
 
-    // Decode Strings Functions
-    std::string Decode(std::vector<int> Samples); // Needs re write.
-    
-    // Tokenizer load and save functions.
+    void Load() {};
+    void Load(std::string FilePath) {};
 
-    bool SaveTokenizer();
-    bool SaveTokenizer(std::string iTokenizerName);
+    // Build Vocab and tokenize / De tokenize functions.
 
-    bool LoadTokenizer();
-    bool LoadTokenizer(std::string iTokenizerName);
+    void Build(std::vector<std::string>& Words);
+
+    std::vector<uint64_t> Encode(std::vector<std::string> Words);
+
+    std::vector<std::string> Decode(py::array_t<uint64_t> Encodes);
+
 
 private:
-    struct _Encode {
-        std::string Encode;
-        uint64_t Index;
+    std::string _FilePath;
+    uint64_t _TargetVocabSize = 3000;
+    std::vector<std::pair<uint64_t, std::string>> _Vocab;
 
-        _Encode(std::string str, uint64_t val) { Encode = str; Index = val; }
-    };
-    // Sort the Encodings & Commonalities vectors to be in the order of descending commonality.
-    void _SortEncodings();
+    inline int64_t _PieceInVocab(std::string Piece);
 
-    // Save and load functions
-    bool _SaveTokenizer();
-    bool _LoadTokenizer();
+    inline int64_t _WordInCorpus(std::vector<std::string> Word, std::vector<std::pair<uint64_t, std::vector<std::string>>> Corpus);
 
-
-    //bool _CheckMGPUCapability(std::vector<sycl::device>* pGPUs);
-
+    inline int64_t _PairInPairs(std::pair<std::string, std::string> Pair, std::vector<std::pair<uint64_t, std::pair<std::string, std::string>>> Pairs);
 };

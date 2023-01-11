@@ -3,7 +3,7 @@ Data Loader for Gavin written in C++
 
 This tool set is a WIP suite of tools for authoring, managing & loading datasets for Gavin bot.
 
-# Current build is failing on Release mode. Please build in debug mode for it to work for testing.
+# Current build is a WIP WordPiece implimentation on the tokenizer and is NOT fully featured nor bug free yet.
 
 This toolset is built using assistance from Intel, and thus is only optimised and guaranteed to work on Intel based systems, it may work on AMD based systems but NO validation is being done. This module is only validated to run on Intel CPUs / GPUs and Nvidia GPUs.
 
