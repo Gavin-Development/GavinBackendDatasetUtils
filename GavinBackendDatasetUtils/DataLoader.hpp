@@ -363,14 +363,21 @@ private:
 
 class Tokenizer {
 public:
-    // Reserved Tokens.
 
-    std::pair<uint64_t, std::string> UnknownToken = { 69420, "[UNK]" };
+    // Reserved Tokens & other stuff.
+
+    std::pair<uint64_t, std::string> UnknownToken = { 3001, "[UNK]" },
+                                     NewLineToken = { 3002, "\n"},
+                                     SpaceToken =   { 3003, " "};
+    uint64_t TargetVocabSize = 3000;
+
 
     // Constructors.
 
     Tokenizer() {};
     Tokenizer(std::string FilePath);
+    Tokenizer(const py::kwargs& PythonKwargs);
+
 
     // Save / Load Functions.
     void Save() {};
@@ -378,6 +385,10 @@ public:
 
     void Load() {};
     void Load(std::string FilePath) {};
+
+
+    // Helpers.
+
 
     // Build Vocab and tokenize / De tokenize functions.
 
@@ -390,7 +401,6 @@ public:
 
 private:
     std::string _FilePath;
-    uint64_t _TargetVocabSize = 3000;
     std::vector<std::pair<uint64_t, std::string>> _Vocab;
 
     inline int64_t _PieceInVocab(std::string Piece);

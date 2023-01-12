@@ -80,7 +80,7 @@ void Tokenizer::Build(std::vector<std::string>& Words) {
 	size_t HighScoreIndex;
 	bool WordHas2Pieces;
 
-	for (size_t i = 0; i < _TargetVocabSize; i++) {
+	for (size_t i = 0; i < TargetVocabSize; i++) {
 		// Reset used variables.
 		Pairs.erase(Pairs.begin(), Pairs.end());
 		Score = 0, HighScore = 0;
@@ -133,6 +133,9 @@ void Tokenizer::Build(std::vector<std::string>& Words) {
 }
 
 std::vector<uint64_t> Tokenizer::Encode(std::vector<std::string> Words) {
+#ifdef _DEBUG
+	std::cout << "Called Tokenizer.Encode()." << std::endl;
+#endif // _DEBUG
 	std::vector<uint64_t> Encodes;
 
 	int64_t EncodePos;
@@ -141,6 +144,13 @@ std::vector<uint64_t> Tokenizer::Encode(std::vector<std::string> Words) {
 
 	for (size_t i = 0; i < Words.size(); i++) {
 
+		// If the word is a new line token.
+		if (Words[i] == NewLineToken.second) { Encodes.push_back(NewLineToken.first); continue; std::cout << "NewLineToken.\n"; }
+
+		// If the word is a space token.
+		if (Words[i] == "") { Encodes.push_back(SpaceToken.first); continue; }
+
+		// Reset the variables for the loop.
 		EncodeComplete = false;
 		TestStartPos = 0;
 
@@ -169,6 +179,9 @@ std::vector<uint64_t> Tokenizer::Encode(std::vector<std::string> Words) {
 };
 
 std::vector<std::string> Tokenizer::Decode(py::array_t<uint64_t> Encodes) {
+#ifdef _DEBUG
+	std::cout << "Called Tokenizer.Decode()." << std::endl;
+#endif // _DEBUG
 	std::vector<std::string> Decodes;
 
 	for (size_t i = 0; i < Encodes.size(); i++) {
@@ -176,12 +189,23 @@ std::vector<std::string> Tokenizer::Decode(py::array_t<uint64_t> Encodes) {
 		// If its an UnknownToken token.
 		if (Encodes.at(i) == UnknownToken.first) { Decodes.push_back(UnknownToken.second); continue; }
 
+		// If its the NewLineToken token.
+		if (Encodes.at(i) == NewLineToken.first) { Decodes.push_back(NewLineToken.second); continue; }
+
+		// If its the SpaceToken token.
+		if (Encodes.at(i) == SpaceToken.first) { Decodes.push_back(SpaceToken.second); continue; }
+
 		// If its not an unknown token.
 
 		// If it is a new word.
 		// Check that the proposed Decode is of adequate length for testing.
 		if (_Vocab[Encodes.at(i)].second.length() >= 3) {
 			if (_Vocab[Encodes.at(i)].second.at(0) != (char&)"#" && _Vocab[Encodes.at(i)].second.at(1) != (char&)"#") {
+				// If this is not the first word in the decode then we can modify the previous word to have a space at the end.
+				if (i > 0) {
+					// Modify the previous decoded word to have a space at the end.
+					if (Decodes[Decodes.size()-1] != NewLineToken.second) Decodes[Decodes.size() - 1] += " ";
+				}
 				// Push back the new word start.
 				Decodes.push_back(_Vocab[Encodes.at(i)].second);
 			}
@@ -195,3 +219,88 @@ std::vector<std::string> Tokenizer::Decode(py::array_t<uint64_t> Encodes) {
 
 	return Decodes;
 }
+
+
+/* *** Constructors *** */
+
+Tokenizer::Tokenizer(std::string FilePath) {
+#ifdef _DEBUG
+	std::cout << "Load Tokenizer from disk constructor called." << std::endl;
+#endif // _DEBUG
+
+}
+
+Tokenizer::Tokenizer(const py::kwargs& PythonKwargs) {
+#ifdef _DEBUG
+	std::cout << "Tokenizer Kwargs constructor called." << std::endl;
+#endif // _DEBUG
+
+	py::tuple Tuple_Arg;
+	py::str String_Arg;
+	py::int_ Int_Arg;
+
+	// Iterate through the kwargs
+	for (auto kwarg : PythonKwargs) {
+		if (kwarg.first.str().cast<std::string>() == "UnknownToken") {
+			// If the argument type is a tuple.
+			if (kwarg.second.get_type() == Tuple_Arg.get_type()) {
+				Tuple_Arg = kwarg.second.cast<py::tuple>();
+				UnknownToken.first = Tuple_Arg[0].cast<int>();
+				UnknownToken.second = Tuple_Arg[1].cast<std::string>();
+			}
+			
+			// If the argument is an integer.
+			if (kwarg.second.get_type() == Int_Arg.get_type()) {
+				UnknownToken.first = kwarg.second.cast<int>();
+			}
+
+			// If the argument is a string.
+			if (kwarg.second.get_type() == String_Arg.get_type()) {
+				UnknownToken.second = kwarg.second.cast<std::string>();
+			}
+		}
+
+		if (kwarg.first.str().cast<std::string>() == "NewLineToken") {
+			// If the argument type is a tuple.
+			if (kwarg.second.get_type() == Tuple_Arg.get_type()) {
+				Tuple_Arg = kwarg.second.cast<py::tuple>();
+				NewLineToken.first = Tuple_Arg[0].cast<int>();
+				NewLineToken.second = Tuple_Arg[1].cast<std::string>();
+			}
+
+			// If the argument is an integer.
+			if (kwarg.second.get_type() == Int_Arg.get_type()) {
+				NewLineToken.first = kwarg.second.cast<int>();
+			}
+
+			// If the argument is a string.
+			if (kwarg.second.get_type() == String_Arg.get_type()) {
+				NewLineToken.second = kwarg.second.cast<std::string>();
+			}
+		}
+
+		if (kwarg.first.str().cast<std::string>() == "SpaceToken") {
+			// If the argument type is a tuple.
+			if (kwarg.second.get_type() == Tuple_Arg.get_type()) {
+				Tuple_Arg = kwarg.second.cast<py::tuple>();
+				SpaceToken.first = Tuple_Arg[0].cast<int>();
+				SpaceToken.second = Tuple_Arg[1].cast<std::string>();
+			}
+
+			// If the argument is an integer.
+			if (kwarg.second.get_type() == Int_Arg.get_type()) {
+				SpaceToken.first = kwarg.second.cast<int>();
+			}
+
+			// If the argument is a string.
+			if (kwarg.second.get_type() == String_Arg.get_type()) {
+				SpaceToken.second = kwarg.second.cast<std::string>();
+			}
+		}
+
+		if (kwarg.first.str().cast<std::string>() == "TargetVocabSize") {
+			TargetVocabSize = kwarg.second.cast<uint64_t>();
+		}
+	}
+}
+

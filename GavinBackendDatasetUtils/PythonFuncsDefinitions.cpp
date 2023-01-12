@@ -31,8 +31,21 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
     */
 
     py::class_<Tokenizer>(handle, "Tokenizer")
+        // Constructors.
+        .def(py::init<std::string>())
+        .def(py::init<py::kwargs>())
         .def(py::init<>())
+        
 
+        // Public data members.
+        .def_readwrite("UnknownToken", &Tokenizer::UnknownToken)
+        .def_readwrite("NewLineToken", &Tokenizer::NewLineToken)
+        .def_readwrite("SpaceToken", &Tokenizer::SpaceToken)
+
+        .def_readonly("TargetVocabSize", &Tokenizer::TargetVocabSize)
+
+
+        // Public Methods.
         .def("Build", &Tokenizer::Build)
         .def("Encode", &Tokenizer::Encode)
         .def("Decode", &Tokenizer::Decode);
