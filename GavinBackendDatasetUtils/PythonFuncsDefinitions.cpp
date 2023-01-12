@@ -13,6 +13,8 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
     handle.def("load_train_data_mt", &LoadTrainDataMT);
     handle.def("load_train_data_st", &LoadTrainDataST);
 
+    handle.def("convert_to_bin", &ConvertToBinFormat);
+
     py::class_<Tokenizer>(handle, "Tokenizer")
         .def(py::init<std::string>())
         .def(py::init<>())

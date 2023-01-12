@@ -299,7 +299,7 @@ namespace py = pybind11;
 py::array_t<int> LoadTrainDataST(uint64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 py::array_t<int> LoadTrainDataMT(int64_t samplesToRead, std::string dataPath, std::string tokenizerName, int startToken, int endToken, int sampleLength, int paddingValue);
 
-
+void ConvertToBinFormat(int64_t samplesToRead, std::string fileToLoad, std::string fileToSave);
 
 namespace BIN {
 	struct SampleHeaderData {
