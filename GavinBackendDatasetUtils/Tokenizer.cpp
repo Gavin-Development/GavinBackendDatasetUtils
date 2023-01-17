@@ -228,6 +228,9 @@ Tokenizer::Tokenizer(std::string FilePath) {
 	std::cout << "Load Tokenizer from disk constructor called." << std::endl;
 #endif // _DEBUG
 
+	_FilePath = FilePath;
+
+	bool Success = _load();
 }
 
 Tokenizer::Tokenizer(const py::kwargs& PythonKwargs) {
@@ -304,3 +307,82 @@ Tokenizer::Tokenizer(const py::kwargs& PythonKwargs) {
 	}
 }
 
+
+bool Tokenizer::_save() {
+#ifdef _DEBUG
+	std::cout << "Tokenizer _save() method called." << std::endl;
+#endif // _DEBUG
+
+	std::cout << _FilePath << std::endl;
+
+	std::fstream File(_FilePath, std::ios::out);
+
+	if (!File.is_open()) {
+		std::cout << "Failed to open file." << std::endl;
+		return false;
+	}
+
+#ifdef _DEBUG
+	std::cout << "File has been opened." << std::endl;
+#endif // _DEBUG
+
+	// Serialize the Tokenizers data into Json to be stored on disc.
+	json TokenizerData;
+
+	TokenizerData["SpecialTokens"] = json::array();
+	TokenizerData["SpecialTokens"].push_back(UnknownToken);
+	TokenizerData["SpecialTokens"].push_back(NewLineToken);
+	TokenizerData["SpecialTokens"].push_back(SpaceToken);
+
+	TokenizerData["TargetVocabSize"] = TargetVocabSize;
+
+	TokenizerData["Vocab"] = json::array();
+	for (std::pair<uint64_t, std::string> Piece : _Vocab) {
+		TokenizerData["Vocab"].push_back(Piece);
+	}
+
+
+	std::cout << TokenizerData << std::endl;
+
+	// Write JSON data to the file.
+	File << TokenizerData;
+
+	File.close();
+
+	std::cout << "Done Writing data to file." << std::endl;
+
+	return true;
+}
+
+bool Tokenizer::_load() {
+#ifdef _DEBUG
+	std::cout << "Tokenizer _load() method called." << std::endl;
+#endif // _DEBUG
+
+	std::fstream File(_FilePath, std::ios::in);
+
+	if (!File.is_open()) {
+		std::cout << "Failed to open file." << std::endl;
+		return false;
+	}
+
+#ifdef _DEBUG
+	std::cout << "File has been opened." << std::endl;
+#endif // _DEBUG
+
+	json TokenizerData = json::parse(File);
+
+	UnknownToken = TokenizerData["SpecialTokens"][0];
+	NewLineToken = TokenizerData["SpecialTokens"][1];
+	SpaceToken = TokenizerData["SpecialTokens"][2];
+
+	TargetVocabSize = TokenizerData["TargetVocabSize"];
+
+	for (auto Piece : TokenizerData["Vocab"]) {
+		_Vocab.push_back(Piece);
+	}
+
+	std::cout << "Done Loading data from file." << std::endl;
+
+	return true;
+}

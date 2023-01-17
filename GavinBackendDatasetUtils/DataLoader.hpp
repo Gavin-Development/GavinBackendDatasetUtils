@@ -22,7 +22,8 @@
 
 #include <CL/sycl.hpp>
 
-
+#include <json.hpp>
+using json = nlohmann::json;
 
 #define BIN_FILE_DTYPE_INT16  (uint8_t)1
 #define BIN_FILE_DTYPE_INT32  (uint8_t)0
@@ -380,11 +381,11 @@ public:
 
 
     // Save / Load Functions.
-    void Save() {};
-    void Save(std::string FilePath) {};
+    void Save() { bool success = _save(); };
+    void Save(std::string FilePath) { _FilePath = FilePath; bool success = _save(); };
 
     void Load() {};
-    void Load(std::string FilePath) {};
+    void Load(std::string FilePath) { _FilePath = FilePath; bool success = _load(); };
 
 
     // Helpers.
@@ -403,9 +404,17 @@ private:
     std::string _FilePath;
     std::vector<std::pair<uint64_t, std::string>> _Vocab;
 
+    /* *** Private helper functions *** */
+
     inline int64_t _PieceInVocab(std::string Piece);
 
     inline int64_t _WordInCorpus(std::vector<std::string> Word, std::vector<std::pair<uint64_t, std::vector<std::string>>> Corpus);
 
     inline int64_t _PairInPairs(std::pair<std::string, std::string> Pair, std::vector<std::pair<uint64_t, std::pair<std::string, std::string>>> Pairs);
+
+    /* *** Saving and Loading functions *** */
+
+    bool _save();
+
+    bool _load();
 };

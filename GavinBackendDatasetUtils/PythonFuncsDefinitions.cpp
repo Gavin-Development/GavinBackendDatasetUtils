@@ -35,6 +35,13 @@ PYBIND11_MODULE(GavinBackendDatasetUtils, handle) {
         .def(py::init<std::string>())
         .def(py::init<py::kwargs>())
         .def(py::init<>())
+
+        // Save and load methods.
+        .def("Save", static_cast<void (Tokenizer::*)(void)>(&Tokenizer::Save))
+        .def("Save", static_cast<void (Tokenizer::*)(std::string)>(&Tokenizer::Save))
+        
+        .def("Load", static_cast<void (Tokenizer::*)(void)>(&Tokenizer::Load))
+        .def("Load", static_cast<void (Tokenizer::*)(std::string)>(&Tokenizer::Load))
         
 
         // Public data members.
