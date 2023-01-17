@@ -378,17 +378,17 @@ public:
     Tokenizer() {};
     Tokenizer(std::string FilePath);
     Tokenizer(const py::kwargs& PythonKwargs);
+    Tokenizer(py::args PythonArgs);
+    // Default order is: TargetVocabSize, UnknownToken, NewLineToken, SpaceToken.
 
 
     // Save / Load Functions.
-    void Save() { bool success = _save(); };
-    void Save(std::string FilePath) { _FilePath = FilePath; bool success = _save(); };
 
-    void Load() {};
-    void Load(std::string FilePath) { _FilePath = FilePath; bool success = _load(); };
+    void Save();
+    void Save(std::string FilePath);
 
-
-    // Helpers.
+    void Load();
+    void Load(std::string FilePath);
 
 
     // Build Vocab and tokenize / De tokenize functions.

@@ -230,7 +230,9 @@ Tokenizer::Tokenizer(std::string FilePath) {
 
 	_FilePath = FilePath;
 
-	bool Success = _load();
+	if (bool Success = _load()) {
+		throw std::runtime_error("An error has occured in loading the Tokenizer.");
+	}
 }
 
 Tokenizer::Tokenizer(const py::kwargs& PythonKwargs) {
@@ -241,9 +243,16 @@ Tokenizer::Tokenizer(const py::kwargs& PythonKwargs) {
 	py::tuple Tuple_Arg;
 	py::str String_Arg;
 	py::int_ Int_Arg;
+	bool UnknownToken_String = false,
+		NewLineToken_String = false,
+		SpaceToken_String = false;
 
 	// Iterate through the kwargs
 	for (auto kwarg : PythonKwargs) {
+		if (kwarg.first.str().cast<std::string>() == "TargetVocabSize") {
+			TargetVocabSize = kwarg.second.cast<uint64_t>();
+		}
+
 		if (kwarg.first.str().cast<std::string>() == "UnknownToken") {
 			// If the argument type is a tuple.
 			if (kwarg.second.get_type() == Tuple_Arg.get_type()) {
@@ -260,6 +269,7 @@ Tokenizer::Tokenizer(const py::kwargs& PythonKwargs) {
 			// If the argument is a string.
 			if (kwarg.second.get_type() == String_Arg.get_type()) {
 				UnknownToken.second = kwarg.second.cast<std::string>();
+				UnknownToken_String = true;
 			}
 		}
 
@@ -279,6 +289,7 @@ Tokenizer::Tokenizer(const py::kwargs& PythonKwargs) {
 			// If the argument is a string.
 			if (kwarg.second.get_type() == String_Arg.get_type()) {
 				NewLineToken.second = kwarg.second.cast<std::string>();
+				NewLineToken_String = true;
 			}
 		}
 
@@ -298,12 +309,85 @@ Tokenizer::Tokenizer(const py::kwargs& PythonKwargs) {
 			// If the argument is a string.
 			if (kwarg.second.get_type() == String_Arg.get_type()) {
 				SpaceToken.second = kwarg.second.cast<std::string>();
+				NewLineToken_String = true;
 			}
 		}
+	}
 
-		if (kwarg.first.str().cast<std::string>() == "TargetVocabSize") {
-			TargetVocabSize = kwarg.second.cast<uint64_t>();
-		}
+	// If the special tokens have been set by str only and not have an integer value set then we need to implicitly set the integer value.
+	if (UnknownToken_String) UnknownToken.first = TargetVocabSize + 1;
+	if (NewLineToken_String) NewLineToken.first = TargetVocabSize + 2;
+	if (SpaceToken_String) SpaceToken.first = TargetVocabSize + 3;
+
+	// Do some sanity checks on the values.
+	if (TargetVocabSize > UnknownToken.first || TargetVocabSize > NewLineToken.first || TargetVocabSize > SpaceToken.first) {
+		throw std::runtime_error("Cant set special token integer encodes to a value smaller than TargetVocabSize.");
+	}
+}
+
+Tokenizer::Tokenizer(py::args PythonArgs) {
+#ifdef _DEBUG
+	std::cout << "Tokenizer Args & Kwargs constructor called." << std::endl;
+#endif // _DEBUG
+
+	// Decode the args depending on the length
+	if (PythonArgs.size() == 1) {
+		TargetVocabSize = PythonArgs[0].cast<uint64_t>();
+	}
+	if (PythonArgs.size() == 2) {
+		UnknownToken.first = PythonArgs[1].cast<py::tuple>()[0].cast<uint64_t>();
+		UnknownToken.second = PythonArgs[1].cast<py::tuple>()[1].cast<std::string>();
+	}
+	if (PythonArgs.size() == 3) {
+		NewLineToken.first = PythonArgs[2].cast<py::tuple>()[0].cast<uint64_t>();
+		NewLineToken.second = PythonArgs[2].cast<py::tuple>()[1].cast<std::string>();
+	}
+	if (PythonArgs.size() == 4) {
+		SpaceToken.first = PythonArgs[3].cast<py::tuple>()[0].cast<uint64_t>();
+		SpaceToken.second = PythonArgs[3].cast<py::tuple>()[1].cast<std::string>();
+	}
+
+	// Do some sanity checks on the values.
+	if (TargetVocabSize > UnknownToken.first || TargetVocabSize > NewLineToken.first || TargetVocabSize > SpaceToken.first) {
+		throw std::runtime_error("Cant set special token integer encodes to a value smaller than TargetVocabSize.");
+	}
+}
+
+/* *** Saving and Loading functions *** */
+
+void Tokenizer::Save() {
+	if (_FilePath.length() == 0) {
+		throw std::runtime_error("No file path specified to save to.");
+	}
+
+	if (!_save()) {
+		throw std::runtime_error("An error has occured in saving the Tokenizer.");
+	}
+}
+
+void Tokenizer::Save(std::string FilePath){
+	_FilePath = FilePath;
+
+	if (!_save()) {
+		throw std::runtime_error("An error has occured in saving the Tokenizer.");
+	}
+}
+
+void Tokenizer::Load() {
+	if (_FilePath.length() == 0) {
+		throw std::runtime_error("No file path specified to load tokenizer from.");
+	}
+
+	if (!_load()) {
+		throw std::runtime_error("An error has occured in loading the Tokenizer.");
+	}
+}
+
+void Tokenizer::Load(std::string FilePath) {
+	_FilePath = FilePath;
+
+	if (!_load()) {
+		throw std::runtime_error("An error has occured in loading the Tokenizer.");
 	}
 }
 
@@ -312,8 +396,6 @@ bool Tokenizer::_save() {
 #ifdef _DEBUG
 	std::cout << "Tokenizer _save() method called." << std::endl;
 #endif // _DEBUG
-
-	std::cout << _FilePath << std::endl;
 
 	std::fstream File(_FilePath, std::ios::out);
 

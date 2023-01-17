@@ -3,8 +3,6 @@ Data Loader for Gavin written in C++
 
 This tool set is a WIP suite of tools for authoring, managing & loading datasets for Gavin bot.
 
-# Current build is a WIP WordPiece implimentation on the tokenizer and is NOT fully featured nor bug free yet.
-
 This toolset is built using assistance from Intel, and thus is only optimised and guaranteed to work on Intel based systems, it may work on AMD based systems but NO validation is being done. This module is only validated to run on Intel CPUs / GPUs and Nvidia GPUs.
 
 ## 3rd party code used
@@ -34,8 +32,7 @@ This is to replace the generator and enable extended functionality such as array
 Please check BINFile_Samples.md in /Samples to see usage.
 
 ### Tokenizer class
-This is to replace the TF BPE tokenizer, it is a very simple BPE algo tokenizer that is in its first stages of deployment and development, it can utilise both CPU & GPU to build the vocab with the ability to progressively build the vocab by batching the corpus.
-So far this class supports GPU accelerated encode building, CPU only for encode and decode of strings, support for unknown encodes, support for saving and loading Tokenizers from local path, some performance optimisations.
+This is to replace the TF BPE tokenizer, it is a very simple WordPiece implimentation that is not particularly tuned for speed nor efficieny yet. The class has been re designed from the ground up to be more pythonic and robust for usage in python. It supports JSON format for saving its information to disc allowing interoperability with other implimentations with minimal translation of data. 
 
 **NOTE** This is class is still in its first iteration and may have bugs, just open an issue or DM me if it does not work.
 
@@ -66,12 +63,10 @@ It has minimal optimisation as its only meant to be a temporary measure for comp
 ## Progress / Roadmap
 
 ## To Do
-* Add functionality to data streaming class to improve usability and performance while adding more functionality.
 * Create a directory containing samples to guide the use of the tools provided.
 * Optimise Tokenizer class loading and saving functions for potentially better performance.
-* Optimise GPU kernel dispatcher for GPU accelerated Vocab building.
-* Optimise BINFile class where possible to improve performance.
-* Usability pass on BINFile class and Tokenizer class.
+* Complete overhaul of BINFile class to fix numerous issues with memory and 1 or 2 performance.
+* Impliment GPU acceleration for WordPiece Tokenizer.
 
 ## Known issues
 None
