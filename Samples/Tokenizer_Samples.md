@@ -4,7 +4,7 @@ This README contains info on examples of how to use the module.
 
 ## Tokenizer class
 
-```
+```py
 Tokenizer(kwargs **)
 Tokenizer(args)
 Tokenizer(string)
@@ -12,10 +12,10 @@ Tokenizer()
 ```
 
 kwargs can be:
-	* TargetVocabSize, (int)
-	* UnknownToken, ((int, str) or (int) or (str))
-	* NewLineToken, ((int, str) or (int) or (str))
-	* SpaceToken, ((int, str) or (int) or (str))
+* TargetVocabSize, (int)
+* UnknownToken, ((int, str) or (int) or (str))
+* NewLineToken, ((int, str) or (int) or (str))
+* SpaceToken, ((int, str) or (int) or (str))
 
 For the case of a single string passed the constructor implicitly sets the corresponding integer value automatically.
 
