@@ -19,7 +19,7 @@ kwargs can be:
 
 For the case of a single string passed the constructor implicitly sets the corresponding integer value automatically.
 
-```
+```py
 Tokenizer.Save()
 Tokenizer.Save(path)
 Tokenizer.Load()
@@ -28,7 +28,7 @@ Tokenizer.Load(path)
 
 **Note** If calling method without path passed on an instance without filepath already set error will be thrown.
 
-```
+```py
 Tokenizer.Build(list)
 Tokenizer.Encode(list)
 Tokenizer.Decode(numpy arr)
@@ -38,7 +38,7 @@ Tokenizer.Decode(numpy arr)
 
 # Innit
 
-```
+```py
 import GavinBackendDatasetUtils as LTD
 
 Test_Tokenizer = LTD.Tokenizer("./TokenizerName.TKNZR")
@@ -47,7 +47,7 @@ This loads the tokenizer from disk.
 
 # Build Encodes
 
-```
+```py
 ListOfWords = ["A", "Dog", "is", "sus"]
 
 Test_Tokenizer.Build(ListOfWords)
@@ -56,7 +56,7 @@ This sample takes in the corpus `ListOfWords` and builds the vocab in the tokeni
 
 # Encoding & decoding a string
 
-```
+```py
 Encodes = Test_Tokenizer.Encode("I am a human being.".split(" "))
 
 Decodes = Test_Tokenizer.Decode(Encodes)
@@ -65,14 +65,14 @@ This sample takes in the string and encodes it to integers then decodes it back 
 
 # Saving & Loading the Tokenizer
 
-```
+```py
 Test_Tokenizer.Save()
 
 Test_Tokenizer.Load()
 ```
 This sample saves, then loads up the tokenizer. If there was no path specified at instantiation of the tokenizer (i.e the tokenizer is loaded from disk) the function will throw an error.
 
-```
+```py
 Test_Tokenizer.Save("./TestTokenizer.TKNZR")
 
 Second_Tokenizer = LTD.Tokenizer("./TestTokenizer.TKNZR")
